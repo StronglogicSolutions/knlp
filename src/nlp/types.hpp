@@ -1,12 +1,13 @@
-#ifndef __NLP_TYPES_HPP__
-#define __NLP_TYPES_HPP__
+#pragma once
 
 #include <deque>
 #include <map>
 #include <string>
 #include <stdio.h>
+#include "nlp.hpp"
 
-namespace conversation {
+namespace conversation
+{
 enum TokenType {
   location       = 0x00,
   person         = 0x01,
@@ -51,7 +52,7 @@ bool operator <(const CompositeContext &rhs) const {
 }
 };
 
-enum QuestionType {
+enum ProbeType {
   UNKNOWN = 0,
   WHAT = 1,
   WHERE = 2,
@@ -66,30 +67,31 @@ enum QuestionType {
 };
 
 // namespace constants {
-const uint8_t QTYPE_Unknown_INDEX = 0;
-const uint8_t QTYPE_unknown_INDEX = 1;
-const uint8_t QTYPE_What_INDEX = 2;
-const uint8_t QTYPE_what_INDEX = 3;
-const uint8_t QTYPE_Where_INDEX = 4;
-const uint8_t QTYPE_where_INDEX = 5;
-const uint8_t QTYPE_Why_INDEX = 6;
-const uint8_t QTYPE_why_INDEX = 7;
-const uint8_t QTYPE_Who_INDEX = 8;
-const uint8_t QTYPE_who_INDEX = 9;
-const uint8_t QTYPE_When_INDEX = 10;
-const uint8_t QTYPE_when_INDEX = 11;
-const uint8_t QTYPE_How_INDEX = 12;
-const uint8_t QTYPE_how_INDEX = 13;
-const uint8_t QTYPE_Can_INDEX = 14;
-const uint8_t QTYPE_can_INDEX = 15;
-const uint8_t QTYPE_Could_INDEX = 16;
-const uint8_t QTYPE_could_INDEX = 17;
-const uint8_t QTYPE_Is_INDEX = 18;
-const uint8_t QTYPE_is_INDEX = 19;
-const uint8_t QTYPE_Translate_INDEX = 20;
-const uint8_t QTYPE_translate_INDEX = 21;
+const uint8_t PRTYPE_Unknown_INDEX = 0;
+const uint8_t PRTYPE_unknown_INDEX = 1;
+const uint8_t PRTYPE_What_INDEX = 2;
+const uint8_t PRTYPE_what_INDEX = 3;
+const uint8_t PRTYPE_Where_INDEX = 4;
+const uint8_t PRTYPE_where_INDEX = 5;
+const uint8_t PRTYPE_Why_INDEX = 6;
+const uint8_t PRTYPE_why_INDEX = 7;
+const uint8_t PRTYPE_Who_INDEX = 8;
+const uint8_t PRTYPE_who_INDEX = 9;
+const uint8_t PRTYPE_When_INDEX = 10;
+const uint8_t PRTYPE_when_INDEX = 11;
+const uint8_t PRTYPE_How_INDEX = 12;
+const uint8_t PRTYPE_how_INDEX = 13;
+const uint8_t PRTYPE_Can_INDEX = 14;
+const uint8_t PRTYPE_can_INDEX = 15;
+const uint8_t PRTYPE_Could_INDEX = 16;
+const uint8_t PRTYPE_could_INDEX = 17;
+const uint8_t PRTYPE_Is_INDEX = 18;
+const uint8_t PRTYPE_is_INDEX = 19;
+const uint8_t PRTYPE_Translate_INDEX = 20;
+const uint8_t PRTYPE_translate_INDEX = 21;
+const uint8_t PRTYPE_Whose_INDEX = 22;
 
-const std::vector<std::string> QTypeNames{
+const std::vector<std::string> PRTypeNames{
   "Unknown",
   "unknown",
   "What",
@@ -111,21 +113,36 @@ const std::vector<std::string> QTypeNames{
   "Is",
   "is",
   "Translate",
-  "translate"
+  "translate",
+  "whose"
 };
 // } // namespace constants
+
+bool      IsQuestion(std::string s);
+ProbeType DetectProbeType(std::string s);
 
 struct ObjectiveContext {
 bool         is_continuing;
 bool         is_question;
-QuestionType question_type;
+ProbeType    probe_type;
 
-std::string toString() {
-  if (is_question) {
-    auto q_index = (question_type == QTYPE_Unknown_INDEX) ? 1 : (question_type * 2);
-    return "Is " + QTypeNames.at(q_index) + " question";
+static ObjectiveContext Create(const std::string& s)
+{
+  ObjectiveContext context{};
+  context.is_question = IsQuestion(s);
+  context.probe_type  = DetectProbeType(s);
+  return context;
+}
+
+std::string toString()
+{
+  if (is_question)
+  {
+    auto pr_index = (probe_type == PRTYPE_Unknown_INDEX) ? 1 : (probe_type * 2);
+    return "Is " + PRTypeNames.at(pr_index) + " question";
   }
-  if (is_continuing) {
+  if (is_continuing)
+  {
     return "Is a continuation";
   }
 
@@ -133,7 +150,8 @@ std::string toString() {
 }
 };
 
-struct SubjectiveContext {
+struct SubjectiveContext
+{
 SubjectiveContext(std::string subject)
 : idx{1} {
   subjects[0] = subject;
@@ -153,13 +171,15 @@ const std::string Current() const {
   return subjects[idx - 1];
 }
 
-void Insert(std::string s) {
+void Insert(std::string s)
+{
   subjects[idx] = s;
 
   (idx == 2) ? idx = 0 : idx++;
 }
 
-std::string toString() {
+std::string toString()
+{
   std::string s{};
   s.reserve(subjects[0].size() + subjects[1].size() + subjects[2].size());
 
@@ -192,5 +212,3 @@ using ObjectiveContexts = std::deque<ObjectiveContext>;
 using Tokens            = std::vector<Token>;
 
 } // namespace conversation
-
-#endif // __NLP_TYPES_HPP__

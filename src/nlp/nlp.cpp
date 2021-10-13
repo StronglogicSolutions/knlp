@@ -1,27 +1,39 @@
 #include "nlp.hpp"
+#include <algorithm>
 
 namespace conversation {
-const std::string TOKENIZER_PATH{"third_party/MITIE/tools/ner_stream/ner_stream third_party/MITIE/MITIE-models/english/ner_model.dat > tokenized_message.txt > tokenized_message.txt"};
+static const std::string TOKENIZER_PATH{"third_party/MITIE/tools/ner_stream/ner_stream"};
+static const std::string MODEL_PATH{"third_party/MITIE/MITIE-models/english/ner_model.dat"};
+static const std::string TOKEN_FILE_NAME{"tokenized_message.txt"};
 
-const std::string get_executable_cwd() {
+static const std::string get_executable_cwd() {
   char* path = realpath("/proc/self/exe", NULL);
   char* name = basename(path);
   return std::string{path, path + strlen(path) - strlen(name)};
 }
 
-std::string TokenizeText(std::string s) {
-  std::string execution_line{};
-  execution_line.reserve(50);
-
-  execution_line += "echo \"" + s + "\" | " + TOKENIZER_PATH;
-
-  std::system(execution_line.c_str());
-    return std::string{
-      static_cast<std::stringstream const&>(
-        std::stringstream() << std::ifstream("tokenized_message.txt").rdbuf())
-        .str()};
+static const std::string get_prefix()
+{
+  return get_executable_cwd() + "../";
 }
 
+std::string TokenizeText(std::string s)
+{
+
+  static const std::string execution_endpoint{get_prefix() + TOKENIZER_PATH + ' ' + get_prefix() + MODEL_PATH + '>' + TOKEN_FILE_NAME};
+  static const std::string execution_line    {"echo \"" + s + "\" | " + execution_endpoint};
+
+  std::system(execution_line.c_str());
+
+  return static_cast<std::stringstream const&>(std::stringstream() << std::ifstream("tokenized_message.txt").rdbuf()).str();
+}
+
+
+static std::string ToLower(std::string s)
+{
+  std::transform(s.begin(), s.end(), s.begin(), [](char c) { return tolower(c); });
+  return s;
+}
 /**
  * GetType
  *
@@ -93,14 +105,14 @@ std::vector<Token> SplitTokens(std::string s) {
  * @param
  * @returns
  */
-QuestionType DetectQuestionType(std::string s) {
-  uint8_t num = conversation::QTypeNames.size();
+ProbeType DetectProbeType(std::string s) {
+  uint8_t num = conversation::PRTypeNames.size();
   for (uint8_t i = 2; i < num; i++) {
-    if (s.find(conversation::QTypeNames.at(i)) != std::string::npos) {
-      return static_cast<conversation::QuestionType>((i / 2));
+    if (s.find(conversation::PRTypeNames.at(i)) != std::string::npos) {
+      return static_cast<conversation::ProbeType>((i / 2));
     }
   }
-  return conversation::QuestionType::UNKNOWN;
+  return conversation::ProbeType::UNKNOWN;
 }
 
 /**
@@ -126,12 +138,14 @@ bool IsContinuing(Message* node) {
 /**
  *
  */
-void NLP::Insert(Message&& node, std::string name, std::string subject) {
-  m_q.emplace_back(std::move(node));                         // Object lives in queue
+Message* NLP::Insert(Message&& node, std::string name, std::string subject)
+{
+  m_q.emplace_back(std::move(node));
   Message* node_ref = &m_q.back();
   const Map::const_iterator it = m_m.find(name);
 
-  if (it == m_m.end()) {                                    // New
+  if (it == m_m.end())                                       // New
+  {
     m_o.emplace_back(std::move(ObjectiveContext{}));
     m_s.emplace_back(std::move(SubjectiveContext{subject}));
     ObjectiveContext*  o_ctx_ref = &m_o.back();
@@ -140,11 +154,10 @@ void NLP::Insert(Message&& node, std::string name, std::string subject) {
     node_ref->subjective         = s_ctx_ref;
     node_ref->next               = nullptr;
 
-    m_m.insert({
-      name,
-      node_ref
-    });
-  } else {                                                   // Append
+    m_m.insert({name, node_ref});
+  }
+  else                                                       // Append
+  {
     Message* previous_head       = &(*it->second);
     node_ref->next               = previous_head;
     node_ref->objective          = previous_head->objective;
@@ -154,7 +167,10 @@ void NLP::Insert(Message&& node, std::string name, std::string subject) {
     m_m.erase(it);
     m_m.insert({name, node_ref});
   }
+
+  return node_ref;
 }
+
 
 /**
  * Reply
@@ -214,12 +230,12 @@ std::string NLP::toString() {
 
 bool NLP::SetContext(Message* node) {
   ObjectiveContext o_ctx{};
-  try {
+  try
+  {
     o_ctx.is_question   = IsQuestion(node->text);
     o_ctx.is_continuing = IsContinuing(node);
-    if (o_ctx.is_question) {
-      o_ctx.question_type = DetectQuestionType(node->text);
-    }
+    o_ctx.probe_type    = DetectProbeType(node->text);
+
     m_o.emplace_back(std::move(o_ctx));
     node->objective = &m_o.back();
   } catch (const std::exception& e) {

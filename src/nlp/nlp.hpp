@@ -1,5 +1,4 @@
-#ifndef __NLP_HPP
-#define __NLP_HPP
+#pragma once
 
 #include <string>
 #include <string_view>
@@ -11,37 +10,35 @@
 #include "types.hpp"
 
 
-namespace conversation {
-extern const std::string TOKENIZER_PATH;
+namespace conversation
+{
+std::string        TokenizeText(std::string s);
+std::vector<Token> SplitTokens(std::string s);
+Token              ParseToken(std::string s);
+TokenType          GetType(std::string type);
+ProbeType          DetectProbeType(std::string s);
+bool               IsQuestion(std::string s);
 
-const  std::string        get_executable_cwd();
-       std::string        TokenizeText(std::string s);
-       std::vector<Token> SplitTokens(std::string s);
-       Token              ParseToken(std::string s);
-       TokenType          GetType(std::string type);
-       QuestionType       DetectQuestionType(std::string s);
-       bool               IsQuestion(std::string s);
+class NLP
+{
+public:
+NLP(std::string username)
+: m_username{username} {}
 
-class NLP {
- public:
-  NLP(std::string username)
-  : m_username{username} {}
+Message*         Insert(Message&& node, std::string name, std::string subject);
+void             Reply(Message* node, std::string reply, std::string name);
+bool             SetContext(Message* node);
+Map              GetConversations() { return m_m; }
+const Message*   GetConversation(std::string name) { return m_m.at(name); }
+std::string      GetUsername() { return m_username; }
+std::string      toString();
 
-  void             Insert(Message&& node, std::string name, std::string subject);
-  void             Reply(Message* node, std::string reply, std::string name);
-  bool             SetContext(Message* node);
-  Map              GetConversations() { return m_m; }
-  const Message*   GetConversation(std::string name) { return m_m.at(name); }
-  std::string_view GetUsername() { return m_username; }
-  std::string      toString();
-
- private:
-  Map                m_m;        // Pointer map
-  MessageObjects     m_q;        // Queue of objects
-  ObjectiveContexts  m_o;        // Queue of objects
-  SubjectContexts    m_s;        // Queue of objects
-  std::string_view   m_username;
+private:
+Map                m_m;        // Pointer map
+MessageObjects     m_q;        // Queue of objects
+ObjectiveContexts  m_o;        // Queue of objects
+SubjectContexts    m_s;        // Queue of objects
+std::string        m_username;
 };
 
 } // namespace Conversation
-#endif // __NLP_HPP
