@@ -1,16 +1,17 @@
 #include "nlp.hpp"
+#include "util.hpp"
 #include <algorithm>
 
 namespace conversation {
+static const char* SENTIMENT_API_TOKEN{};
+static const uint8_t SENTIMENT_ANALYZER_INDEX{0x00};
+static const char* URLS[]{
+  "https://twinword-sentiment-analysis.p.rapidapi.com/analyze/"
+};
+
 static const std::string TOKENIZER_PATH{"third_party/MITIE/tools/ner_stream/ner_stream"};
 static const std::string MODEL_PATH{"third_party/MITIE/MITIE-models/english/ner_model.dat"};
 static const std::string TOKEN_FILE_NAME{"tokenized_message.txt"};
-
-static const std::string get_executable_cwd() {
-  char* path = realpath("/proc/self/exe", NULL);
-  char* name = basename(path);
-  return std::string{path, path + strlen(path) - strlen(name)};
-}
 
 static const std::string get_prefix()
 {
@@ -134,6 +135,56 @@ bool IsContinuing(Message* node) {
   return false;
 }
 
+
+
+static int32_t GetSentimentCount()
+{
+  int32_t     count;
+  std::string file = ReadStats();
+  if (file.empty())
+    count = 0;
+  else
+    count = std::stoi(file);
+  return count;
+};
+
+static void IncrementSentimentCount()
+{
+  int32_t count = GetSentimentCount();
+  SaveStats(std::to_string(++count));
+};
+/**
+ *
+ */
+Sentiment GetSentiment(const std::string& query)
+{
+  Sentiment sentiment{};
+  RequestResponse response{cpr::Post(
+    cpr::Url       {URLS[SENTIMENT_ANALYZER_INDEX]},
+    cpr::Header    {{"x-rapidapi-host", "twinword-sentiment-analysis.p.rapidapi.com"},
+                    {"x-rapidapi-key" , SENTIMENT_API_TOKEN}},
+    cpr::Parameters{{"text", query}})};
+
+  if (!response.error)
+  {
+    IncrementSentimentCount();
+    const auto json = response.json();
+    if (!json.is_null() && json.is_object())
+    {
+      sentiment.type  = StringToSentiment(json["type"] .get<std::string>());
+      sentiment.score = json["score"].get<float>();
+
+      for (const auto& item : json["keywords"])
+        sentiment.keywords.emplace_back(Keyword{
+          .score = item["score"].get<float>(),
+          .word  = item["word"].get<std::string>()});
+    }
+  }
+  else
+    log("GetSentiment request failed.", response.GetError().c_str());
+
+  return sentiment;
+}
 
 /**
  *

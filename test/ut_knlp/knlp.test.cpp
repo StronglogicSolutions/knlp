@@ -10,7 +10,7 @@ std::vector<std::string> GetReplyMessage(const std::string& s, conversation::Tok
   return reply_messages;
 }
 
-TEST(KNLPTests, Converse)
+TEST(KNLPTests, DISABLED_Converse)
 {
   using Tokens = std::vector<conversation::Token>;
   static const std::string END_WORD{"exit"};
@@ -28,7 +28,7 @@ TEST(KNLPTests, Converse)
     conversation::Message          message        {.text = line, .received = false};
     const auto                     replies       = GetReplyMessage(message.text, tokens);
     conversation::Message          rep_msg        {.text=replies.front(), .received = true};
-    conversation::Message*         msg_ptr       = nlp.Insert(std::move(message), USERNAME, (tokens.empty()) ? tokens.front().value : "unknown");
+    conversation::Message*         msg_ptr       = nlp.Insert(std::move(message), USERNAME, (!tokens.empty()) ? tokens.front().value : "unknown");
     conversation::Message*         rep_ptr       = nlp.Insert(std::move(rep_msg), USERNAME, "unknown");
     nlp.SetContext(msg_ptr);
   }
@@ -39,4 +39,14 @@ TEST(KNLPTests, Converse)
   EXPECT_FALSE(final_s.empty());
 }
 
+TEST(KNLPTests, SentimentAnalyzerTest)
+{
+  static const std::string query{"There once was not a man from Nantucket, whose chopsticks were not long enough to eat with"};
+
+  conversation::Sentiment sentiment = conversation::GetSentiment(query);
+  for (const auto& keyword : sentiment.keywords)
+    conversation::log(keyword.word, std::string{" has a score of "}, std::to_string(keyword.score));
+
+  EXPECT_TRUE(sentiment.score > 0.0f);
+}
 
