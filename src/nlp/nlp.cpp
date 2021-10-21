@@ -42,18 +42,14 @@ static std::string ToLower(std::string s)
  * @returns
  *
  */
-TokenType GetType(std::string type) {
-  if (type.compare("LOCATION") == 0) {
+TokenType GetType(const std::string& type)
+{
+  if (type.compare("LOCATION") == 0)
     return TokenType::location;
-  }
-  else
-  if (type.compare("PERSON") == 0) {
+  if (type.compare("PERSON") == 0)
     return TokenType::person;
-  }
-  else
-  if (type.compare("ORGANIZATION") == 0) {
+  if (type.compare("ORGANIZATION") == 0)
     return TokenType::organization;
-  }
   return TokenType::unknown;
 }
 
@@ -64,7 +60,8 @@ TokenType GetType(std::string type) {
  * @returns
  *
  */
-Token ParseToken(std::string s) {
+Token ParseToken(const std::string& s)
+{
   auto delim = s.find(' ');
   return Token{
     .type  = GetType(s.substr(0, delim)),
@@ -79,23 +76,26 @@ Token ParseToken(std::string s) {
  * @returns
  *
  */
-std::vector<Token> SplitTokens(std::string s) {
+std::vector<Token> SplitTokens(std::string s)
+{
   std::vector<Token> tokens{};
   auto               delim_index = s.find_first_of('[');
 
-  while (delim_index != std::string::npos) {
-    auto token_start     = s.substr(delim_index);
-    auto delim_end_index = (token_start.find_first_of(']') - 1);
-    auto token_value     = token_start.substr(1, delim_end_index);
+  while (delim_index != std::string::npos)
+  {
+    const auto token_start     = s.substr(delim_index);
+    const auto delim_end_index = (token_start.find_first_of(']') - 1);
+    const auto token_value     = token_start.substr(1, delim_end_index);
 
     tokens.push_back(ParseToken(token_value));
 
-    if (token_start.size() >= (token_value.size() + 3)) {
+    if (token_start.size() >= (token_value.size() + 3))
+    {
       s           = token_start.substr(token_value.size() + 3);
       delim_index = s.find_first_of('[');
-    } else {
-      break;
     }
+    else
+      break;
   }
   return tokens;
 }
@@ -106,23 +106,21 @@ std::vector<Token> SplitTokens(std::string s) {
  * @param
  * @returns
  */
-ProbeType DetectProbeType(std::string s) {
+ProbeType DetectProbeType(const std::string& s)
+{
   uint8_t num = conversation::PRTypeNames.size();
-  for (uint8_t i = 2; i < num; i++) {
-    if (s.find(conversation::PRTypeNames.at(i)) != std::string::npos) {
+  for (uint8_t i = 2; i < num; i++)
+    if (s.find(conversation::PRTypeNames.at(i)) != std::string::npos)
       return static_cast<conversation::ProbeType>((i / 2));
-    }
-  }
   return conversation::ProbeType::UNKNOWN;
 }
 
 /**
  * IsQuestion
  */
-bool IsQuestion(std::string s) {
-  std::size_t it = s.find("?");
-
-  return it != std::string::npos && it != 0;
+bool IsQuestion(const std::string& s)
+{
+  return (s.find("?") != std::string::npos);
 }
 
 bool IsContinuing(Message* node) {
@@ -210,13 +208,16 @@ Message* NLP::Insert(Message&& node, std::string name, std::string subject)
   else                                                       // Append
   {
     Message* previous_head       = &(*it->second);
-    node_ref->next               = previous_head;
+    while (previous_head->next)
+      previous_head = previous_head->next;
+    previous_head->next          = node_ref;
+    node_ref->next               = nullptr;
     node_ref->objective          = previous_head->objective;
     node_ref->subjective         = previous_head->subjective;
     node_ref->subjective->Insert(subject);
 
-    m_m.erase(it);
-    m_m.insert({name, node_ref});
+    // m_m.erase(it);
+    // m_m.insert({name, node_ref});
   }
 
   return node_ref;
@@ -241,14 +242,26 @@ void NLP::Reply(Message* node, std::string reply, std::string name) {
   node->next = reply_node_ref;
 }
 
+template<typename T>
+class reverse
+{
+private:
+  T& iterable_;
+public:
+  explicit reverse(T& iterable) : iterable_{iterable} {}
+  auto begin() const { return std::rbegin(iterable_); }
+  auto end() const { return std::rend(iterable_); }
+};
+
 /**
  * toString
  */
 std::string NLP::toString() {
   std::string node_string{};
-
-  for (const auto& c : m_m) {
-    const Message* node = c.second;
+  for (const auto& it : m_m)
+   {
+    const std::string interlocutor = it.first;
+    const Message*    node         = it.second;
 
     node_string +=
 "┌────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐\n│                                                                                                                    │\n\
@@ -256,22 +269,21 @@ std::string NLP::toString() {
 │░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░CONVERSATION░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░│\n\
 │░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░│\n│";
 
-    node_string += "\n│Interlocutor: " + c.first +
-                   "\n│Subjective: " + c.second->subjective->toString() +
-                   "\n│Objective: "  + c.second->objective->toString() +
+    node_string += "\n│Interlocutor: " + interlocutor +
+                   "\n│Subjective: "   + node->subjective->toString() +
+                   "\n│Objective: "    + node->objective->toString() +
                    "\n│Nodes:\n";
 
     uint8_t n_idx{1};
-    while ( node != nullptr) {
-        node_string += "│ " + std::to_string(n_idx) + ": ";
-        // for (int i = 0; i <= n_idx; i++)
-        //   node_string += "  ";
-        node_string += "Objective: "  + node->objective->toString() + "\n│   ";
-        node_string += "From:      ";
-        node_string += (node->received) ? c.first : GetUsername();
-        node_string += "\n│   " + node->text + "\n";
-        node = node->next;
-        n_idx++;
+    while ( node != nullptr)
+    {
+      node_string += "│ " + std::to_string(n_idx) + ": ";
+      node_string += "Objective: "  + node->objective->toString() + "\n│   ";
+      node_string += "From:      ";
+      node_string += (node->received) ? interlocutor : GetUsername();
+      node_string += "\n│   " + node->text + "\n";
+      node = node->next;
+      n_idx++;
     }
     node_string +=
 "│                                                                                                                    │\n│                                                                                                                    │\n└────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘\n\n";
@@ -289,7 +301,9 @@ bool NLP::SetContext(Message* node) {
 
     m_o.emplace_back(std::move(o_ctx));
     node->objective = &m_o.back();
-  } catch (const std::exception& e) {
+  }
+  catch (const std::exception& e)
+  {
     std::cout << "Exception caught: " << e.what() << std::endl;
     return false;
   }

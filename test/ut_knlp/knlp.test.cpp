@@ -10,7 +10,19 @@ std::vector<std::string> GetReplyMessage(const std::string& s, conversation::Tok
   return reply_messages;
 }
 
-TEST(KNLPTests, DISABLED_Converse)
+static const char* ConversationPhrases[]{
+  "Hi how are you?",
+  "I'm doing fine, thanks. Where are you from?",
+  "I'm from Nantucket. Where are you from?",
+  "I'm from Cambodia.",
+  "What do you do?",
+  "I am a Software Engineer. And you?",
+  "I am a dentist who specializes in periondontal anaesthesia",
+  "What a great job to have!",
+  "Thank you"
+};
+
+TEST(KNLPTests, Converse)
 {
   using Tokens = std::vector<conversation::Token>;
   static const std::string END_WORD{"exit"};
@@ -18,10 +30,10 @@ TEST(KNLPTests, DISABLED_Converse)
   std::string              line{};
   conversation::NLP        nlp{USERNAME};
 
-  for(;;)
+  for(int i = 0; i < 9; i++)
   {
-    std::getline(std::cin, line);
-    if (line == END_WORD) break;
+
+    line = ConversationPhrases[i];
 
     conversation::ObjectiveContext objective_ctx = conversation::ObjectiveContext::Create(line);
     conversation::Tokens           tokens        = conversation::SplitTokens(conversation::TokenizeText(line));
@@ -39,7 +51,7 @@ TEST(KNLPTests, DISABLED_Converse)
   EXPECT_FALSE(final_s.empty());
 }
 
-TEST(KNLPTests, SentimentAnalyzerTest)
+TEST(KNLPTests, DISABLED_SentimentAnalyzerTest)
 {
   static const std::string query{"There once was not a man from Nantucket, whose chopsticks were not long enough to eat with"};
 

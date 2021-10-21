@@ -118,8 +118,8 @@ const std::vector<std::string> PRTypeNames{
 };
 // } // namespace constants
 
-bool      IsQuestion(std::string s);
-ProbeType DetectProbeType(std::string s);
+bool      IsQuestion(const std::string& s);
+ProbeType DetectProbeType(const std::string& s);
 
 struct ObjectiveContext {
 bool         is_continuing;

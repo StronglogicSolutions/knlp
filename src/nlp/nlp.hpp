@@ -46,10 +46,10 @@ std::vector<Keyword> keywords;
 
 std::string        TokenizeText(std::string s);
 std::vector<Token> SplitTokens(std::string s);
-Token              ParseToken(std::string s);
-TokenType          GetType(std::string type);
-ProbeType          DetectProbeType(std::string s);
-bool               IsQuestion(std::string s);
+Token              ParseToken(const std::string& s);
+TokenType          GetType(const std::string& type);
+ProbeType          DetectProbeType(const std::string& s);
+bool               IsQuestion(const std::string& s);
 Sentiment          GetSentiment(const std::string& s);
 
 class NLP
