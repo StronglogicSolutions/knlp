@@ -42,7 +42,7 @@ TEST(KNLPTests, Converse)
     conversation::Message          rep_msg        {.text=replies.front(), .received = true};
     conversation::Message*         msg_ptr       = nlp.Insert(std::move(message), USERNAME, (!tokens.empty()) ? tokens.front().value : "unknown");
     conversation::Message*         rep_ptr       = nlp.Insert(std::move(rep_msg), USERNAME, "unknown");
-    nlp.SetContext(msg_ptr);
+    nlp.SetContext(msg_ptr, tokens);
   }
 
   const auto final_s = nlp.toString();

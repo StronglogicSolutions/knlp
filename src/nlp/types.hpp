@@ -116,12 +116,12 @@ const std::vector<std::string> PRTypeNames{
   "translate",
   "whose"
 };
-// } // namespace constants
 
 bool      IsQuestion(const std::string& s);
 ProbeType DetectProbeType(const std::string& s);
 
-struct ObjectiveContext {
+struct ObjectiveContext
+{
 bool         is_continuing;
 bool         is_question;
 ProbeType    probe_type;
@@ -152,23 +152,42 @@ std::string toString()
 
 struct SubjectiveContext
 {
+SubjectiveContext(const std::vector<Token>& tokens)
+{
+  if (!tokens.empty())
+  {
+    uint8_t i{};
+    for (auto it = tokens.begin(); (it != tokens.end()) && (i < 3); i++)
+      subjects[i] = (it++)->value;
+  }
+}
+
 SubjectiveContext(std::string subject)
-: idx{1} {
+{
   subjects[0] = subject;
   subjects[1] = "";
   subjects[2] = "";
 }
 
-const std::string& operator[] (uint8_t i) const {
+const std::string& operator[] (uint8_t i) const
+{
   if (i < 3)
     return subjects[i];
   return subjects[0];
 }
 
-const std::string Current() const {
+const std::string Current() const
+{
   if (idx == 0)
     return subjects[2];
   return subjects[idx - 1];
+}
+
+const std::string Next()
+{
+  const std::string ret_s = subjects[idx];
+  idx = (idx == 2) ? 0 : idx + 1;
+  return ret_s;
 }
 
 void Insert(std::string s)
@@ -194,15 +213,16 @@ std::string toString()
 }
 
 std::string subjects[3];
-uint8_t     idx;
+uint8_t     idx{0};
 };
 
-struct Message {
-  const std::string         text;
-  const bool                received;
-        Message*            next;
-        SubjectiveContext*  subjective;
-        ObjectiveContext*   objective;
+struct Message
+{
+const std::string         text;
+const bool                received;
+      Message*            next;
+      SubjectiveContext*  subjective;
+      ObjectiveContext*   objective;
 };
 
 using Map               = std::map<const std::string, Message*>;

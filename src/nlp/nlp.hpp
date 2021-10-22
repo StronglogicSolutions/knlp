@@ -60,7 +60,7 @@ NLP(std::string username)
 
 Message*         Insert(Message&& node, std::string name, std::string subject);
 void             Reply(Message* node, std::string reply, std::string name);
-bool             SetContext(Message* node);
+bool             SetContext(Message* node, const Tokens& tokens);
 Map              GetConversations() { return m_m; }
 const Message*   GetConversation(std::string name) { return m_m.at(name); }
 std::string      GetUsername() { return m_username; }

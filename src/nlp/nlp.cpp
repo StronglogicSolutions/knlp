@@ -22,7 +22,7 @@ std::string TokenizeText(std::string s)
 {
 
   static const std::string execution_endpoint{get_prefix() + TOKENIZER_PATH + ' ' + get_prefix() + MODEL_PATH + '>' + TOKEN_FILE_NAME};
-  static const std::string execution_line    {"echo \"" + s + "\" | " + execution_endpoint};
+         const std::string execution_line    {"echo \"" + s + "\" | " + execution_endpoint};
 
   std::system(execution_line.c_str());
 
@@ -253,6 +253,32 @@ public:
   auto end() const { return std::rend(iterable_); }
 };
 
+static std::string GetSubjects(Message* node)
+{
+  const auto IsUnknown = [](const std::string& s) -> bool { return s == "unknown"; };
+  static const             int8_t max{5};
+  std::vector<std::string> subjects{};
+
+  while ((node != nullptr) && (subjects.size() < max))
+  {
+    std::string subject = node->subjective->Next();
+    while (!subject.empty() && !IsUnknown(subject))
+    {
+      subjects.push_back(subject);
+      subject = node->subjective->Next();
+    }
+    node = node->next;
+  }
+
+  std::string ret_s{};
+  if (subjects.size())
+  {
+    for (const auto& s : subjects)
+      ret_s += s + ", ";
+      return ret_s.substr(0, ret_s.size() - 2);
+  }
+  return "";
+}
 /**
  * toString
  */
@@ -261,7 +287,7 @@ std::string NLP::toString() {
   for (const auto& it : m_m)
    {
     const std::string interlocutor = it.first;
-    const Message*    node         = it.second;
+          Message*    node         = it.second;
 
     node_string +=
 "┌────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐\n│                                                                                                                    │\n\
@@ -270,18 +296,22 @@ std::string NLP::toString() {
 │░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░│\n│";
 
     node_string += "\n│Interlocutor: " + interlocutor +
-                   "\n│Subjective: "   + node->subjective->toString() +
-                   "\n│Objective: "    + node->objective->toString() +
-                   "\n│Nodes:\n";
+                   "\n│Subjective:   " + GetSubjects(node) +
+                   "\n│Nodes:\n" +
+                   "├────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤\n" +
+                   "├────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤\n";
 
     uint8_t n_idx{1};
     while ( node != nullptr)
     {
-      node_string += "│ " + std::to_string(n_idx) + ": ";
-      node_string += "Objective: "  + node->objective->toString() + "\n│   ";
-      node_string += "From:      ";
+      node_string += "│ " + std::to_string(n_idx) + ".\n│   ";
+      node_string += "Objective:  "  + node->objective->toString()  + "\n│   ";
+      node_string += "Subjective: "  + node->subjective->toString() + "\n│   ";
+      node_string += "From:       ";
       node_string += (node->received) ? interlocutor : GetUsername();
-      node_string += "\n│   " + node->text + "\n";
+      node_string += "\n│   Message:    " + node->text + "\n";
+      node_string += "├───────────────────────────────────────────────────────────────"
+                      "─────────────────────────────────────────────────────┤\n";
       node = node->next;
       n_idx++;
     }
@@ -291,16 +321,20 @@ std::string NLP::toString() {
   return node_string;
 }
 
-bool NLP::SetContext(Message* node) {
-  ObjectiveContext o_ctx{};
+bool NLP::SetContext(Message* node, const Tokens& tokens)
+{
   try
   {
+    SubjectiveContext s_ctx{tokens};
+    ObjectiveContext  o_ctx{};
     o_ctx.is_question   = IsQuestion(node->text);
     o_ctx.is_continuing = IsContinuing(node);
     o_ctx.probe_type    = DetectProbeType(node->text);
 
     m_o.emplace_back(std::move(o_ctx));
-    node->objective = &m_o.back();
+    m_s.emplace_back(std::move(s_ctx));
+    node->objective  = &m_o.back();
+    node->subjective = &m_s.back();
   }
   catch (const std::exception& e)
   {
