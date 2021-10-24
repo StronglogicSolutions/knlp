@@ -216,6 +216,13 @@ std::string subjects[3];
 uint8_t     idx{0};
 };
 
+struct Message;
+using  Map               = std::map<const std::string, Message*>;
+using  MessageObjects    = std::deque<Message>;
+using  SubjectContexts   = std::deque<SubjectiveContext>;
+using  ObjectiveContexts = std::deque<ObjectiveContext>;
+using  Tokens            = std::vector<Token>;
+
 struct Message
 {
 const std::string         text;
@@ -223,12 +230,7 @@ const bool                received;
       Message*            next;
       SubjectiveContext*  subjective;
       ObjectiveContext*   objective;
+      Tokens              tokens;
 };
-
-using Map               = std::map<const std::string, Message*>;
-using MessageObjects    = std::deque<Message>;
-using SubjectContexts   = std::deque<SubjectiveContext>;
-using ObjectiveContexts = std::deque<ObjectiveContext>;
-using Tokens            = std::vector<Token>;
 
 } // namespace conversation

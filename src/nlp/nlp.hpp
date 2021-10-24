@@ -46,6 +46,7 @@ std::vector<Keyword> keywords;
 
 std::string        TokenizeText(std::string s);
 std::vector<Token> SplitTokens(std::string s);
+std::vector<Token> GetTokens(const std::string& s);
 Token              ParseToken(const std::string& s);
 TokenType          GetType(const std::string& type);
 ProbeType          DetectProbeType(const std::string& s);
@@ -58,7 +59,7 @@ public:
 NLP(std::string username)
 : m_username{username} {}
 
-Message*         Insert(Message&& node, std::string name, std::string subject);
+Message*         Insert(Message&& node, const std::string& name);
 void             Reply(Message* node, std::string reply, std::string name);
 bool             SetContext(Message* node, const Tokens& tokens);
 Map              GetConversations() { return m_m; }

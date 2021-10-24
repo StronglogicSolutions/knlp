@@ -100,6 +100,11 @@ std::vector<Token> SplitTokens(std::string s)
   return tokens;
 }
 
+std::vector<Token> GetTokens(const std::string& s)
+{
+  return conversation::SplitTokens(conversation::TokenizeText(s));
+}
+
 /**
  * DetectQuestionType
  *
@@ -187,11 +192,13 @@ Sentiment GetSentiment(const std::string& query)
 /**
  *
  */
-Message* NLP::Insert(Message&& node, std::string name, std::string subject)
+Message* NLP::Insert(Message&& node, const std::string& name)
 {
   m_q.emplace_back(std::move(node));
-  Message* node_ref = &m_q.back();
-  const Map::const_iterator it = m_m.find(name);
+  const auto&               tokens   = node.tokens;
+  const auto                subject  = (tokens.size()) ? tokens.front().value : "unknown";
+  Message*                  node_ref = &m_q.back();
+  const Map::const_iterator it       = m_m.find(name);
 
   if (it == m_m.end())                                       // New
   {
@@ -215,11 +222,8 @@ Message* NLP::Insert(Message&& node, std::string name, std::string subject)
     node_ref->objective          = previous_head->objective;
     node_ref->subjective         = previous_head->subjective;
     node_ref->subjective->Insert(subject);
-
-    // m_m.erase(it);
-    // m_m.insert({name, node_ref});
   }
-
+  SetContext(node_ref, tokens);
   return node_ref;
 }
 
