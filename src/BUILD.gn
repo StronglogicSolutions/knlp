@@ -10,15 +10,10 @@ config("json") {
   ]
 }
 
-
 source_set("knlp_sources") {
   public_configs = [
     ":cpr",
     ":json"
-  ]
-
-  include_dirs = [
-    "//src",
   ]
 
   sources = [
@@ -34,23 +29,13 @@ source_set("knlp_sources") {
 
 shared_library("knlp") {
   public_deps = [
-    "//src/nlp:knlp_sources"
-  ]
-
-  include_dirs = [
-    "//src",
-    "//third_party"
+    ":knlp_sources"
   ]
 }
 
 executable("knlp_app") {
   public_deps = [
-    "//src/nlp:knlp_sources"
-  ]
-
-  include_dirs = [
-    "//src",
-    "//third_party"
+    ":knlp_sources"
   ]
 
   sources = [
