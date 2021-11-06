@@ -1,4 +1,21 @@
+config("cpr") {
+  include_dirs = [
+    "//third_party/cpr/include"
+  ]
+}
+
+config("json") {
+  include_dirs = [
+    "//third_party/json/include",
+  ]
+}
+
+
 source_set("knlp_sources") {
+  public_configs = [
+    ":cpr",
+    ":json"
+  ]
 
   include_dirs = [
     "//src",
@@ -6,6 +23,12 @@ source_set("knlp_sources") {
 
   sources = [
     "//src/nlp/nlp.cpp",
+  ]
+
+  libs = [
+    "crypto",
+    "cpr",
+    "curl",
   ]
 }
 
