@@ -1,9 +1,9 @@
 executable("ut_knlp") {
+  testonly = true
 
   public_deps = [
-    "//src/nlp:knlp_sources"
+    "//src:knlp_sources"
   ]
-  testonly = true
 
   deps = [
     "//test:gtest_main",
