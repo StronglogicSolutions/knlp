@@ -22,7 +22,7 @@ std::string TokenizeText(std::string s)
 {
 
   static const std::string execution_endpoint{get_prefix() + TOKENIZER_PATH + ' ' + get_prefix() + MODEL_PATH + '>' + TOKEN_FILE_NAME};
-         const std::string execution_line    {"echo \"" + s + "\" | " + execution_endpoint};
+         const std::string execution_line    {"echo \"" + s + "\" | " + execution_endpoint + " 2>/dev/null"};
 
   std::system(execution_line.c_str());
 

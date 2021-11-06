@@ -52,6 +52,8 @@ TokenType          GetType(const std::string& type);
 ProbeType          DetectProbeType(const std::string& s);
 bool               IsQuestion(const std::string& s);
 Sentiment          GetSentiment(const std::string& s);
+std::string        TokensToJSON(const std::vector<Token>& tokens);
+
 
 class NLP
 {

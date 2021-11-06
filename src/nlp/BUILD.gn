@@ -32,3 +32,29 @@ source_set("knlp_sources") {
   ]
 }
 
+shared_library("knlp") {
+  public_deps = [
+    "//src/nlp:knlp_sources"
+  ]
+
+  include_dirs = [
+    "//src",
+    "//third_party"
+  ]
+}
+
+executable("knlp_app") {
+  public_deps = [
+    "//src/nlp:knlp_sources"
+  ]
+
+  include_dirs = [
+    "//src",
+    "//third_party"
+  ]
+
+  sources = [
+    "//src/main.cpp",
+    "//src/nlp/json.cpp"
+  ]
+}
