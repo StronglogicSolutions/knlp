@@ -4,9 +4,12 @@
 
 namespace conversation {
 static const char* SENTIMENT_API_TOKEN{};
+static const char* EMOTION_API_TOKEN{""};
 static const uint8_t SENTIMENT_ANALYZER_INDEX{0x00};
+static const uint8_t EMOTION_ANALYZER_INDEX  {0x01};
 static const char* URLS[]{
-  "https://twinword-sentiment-analysis.p.rapidapi.com/analyze/"
+  "https://twinword-sentiment-analysis.p.rapidapi.com/analyze/",
+  "https://twinword-emotion-analysis-v1.p.rapidapi.com/analyze/"
 };
 
 static const std::string TOKENIZER_PATH{"third_party/MITIE/tools/ner_stream/ner_stream"};
@@ -189,6 +192,25 @@ Sentiment GetSentiment(const std::string& query)
   return sentiment;
 }
 
+/**
+ *
+ */
+Emotion GetEmotion(const std::string& query)
+{
+  Emotion emotion;
+  RequestResponse response{cpr::Post(
+    cpr::Url       {URLS[EMOTION_ANALYZER_INDEX]},
+    cpr::Header    {{"x-rapidapi-host", "twinword-emotion-analysis-v1.p.rapidapi.com"},
+                    {"x-rapidapi-key" , EMOTION_API_TOKEN}},
+    cpr::Parameters{{"text", query}})};
+
+  if (!response.error)
+    emotion = Emotion::Parse(response.json());
+  else
+    log("GetEmotion request failed.", response.GetError().c_str());
+
+  return emotion;
+}
 /**
  *
  */

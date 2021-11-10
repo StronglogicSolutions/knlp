@@ -56,3 +56,15 @@ TEST(KNLPTests, DISABLED_SentimentAnalyzerTest)
   EXPECT_TRUE(sentiment.score > 0.0f);
 }
 
+
+TEST(KNLPTests, EmotionAnalyzerTest)
+{
+  static const std::string query{"I love concrete but I hate bananas. You make me feel amazing."};
+
+  conversation::Emotion emotion = conversation::GetEmotion(query);
+  std::string s = emotion.GetJSON();
+  conversation::log(s);
+
+  EXPECT_TRUE(emotion.emotions.size());
+}
+
