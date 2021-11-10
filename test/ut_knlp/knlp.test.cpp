@@ -31,7 +31,7 @@ TEST(KNLPTests, Converse)
   std::string              line{};
   conversation::NLP        nlp{USERNAME};
 
-  for(int i = 0; i < 9; i++)
+  for (auto i = 0; i < 9; i++)
   {
     line = ConversationPhrases[i];
     Message* msg_ptr = nlp.Insert(Message{.text = line, .received = false, .tokens = GetTokens(line)}, USERNAME);
@@ -48,7 +48,6 @@ TEST(KNLPTests, Converse)
 TEST(KNLPTests, DISABLED_SentimentAnalyzerTest)
 {
   static const std::string query{"There once was not a man from Nantucket, whose chopsticks were not long enough to eat with"};
-
   conversation::Sentiment sentiment = conversation::GetSentiment(query);
   for (const auto& keyword : sentiment.keywords)
     conversation::log(keyword.word, std::string{" has a score of "}, std::to_string(keyword.score));
@@ -60,11 +59,9 @@ TEST(KNLPTests, DISABLED_SentimentAnalyzerTest)
 TEST(KNLPTests, EmotionAnalyzerTest)
 {
   static const std::string query{"I love concrete but I hate bananas. You make me feel amazing."};
-
   conversation::Emotion emotion = conversation::GetEmotion(query);
   std::string s = emotion.GetJSON();
   conversation::log(s);
-
   EXPECT_TRUE(emotion.emotions.size());
 }
 
