@@ -3,7 +3,7 @@
 #include <algorithm>
 
 namespace conversation {
-static const char* SENTIMENT_API_TOKEN{};
+static const char* SENTIMENT_API_TOKEN{""};
 static const char* EMOTION_API_TOKEN{""};
 static const uint8_t SENTIMENT_ANALYZER_INDEX{0x00};
 static const uint8_t EMOTION_ANALYZER_INDEX  {0x01};

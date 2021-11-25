@@ -32,23 +32,13 @@ std::string user;
 std::string subject;
 CompositeContext(std::string user_name, std::string subject_name) : user(user_name), subject(subject_name) {}
 
-bool operator <(const CompositeContext &rhs) const {
-  auto user_comp = user.compare(rhs.user);
-  if (user_comp < 0) {
-    return true;
-  }
-  else
-  if (user_comp > 0) {
-    return false;
-  }
-  else {
-    auto subject_comp = subject.compare(rhs.subject);
-    if (subject_comp < 0) {
-      return true;
-    }
-    else
-      return true;
-  }
+bool operator <(const CompositeContext &rhs) const
+{
+  const auto user_comp = user.compare(rhs.user);
+  return (user_comp < 0) ?
+    true : (user_comp > 0) ?
+      false :
+      subject.compare(rhs.subject) < 0;
 }
 };
 

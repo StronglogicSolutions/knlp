@@ -42,6 +42,11 @@ struct Sentiment
 SentimentType type;
 float         score;
 std::vector<Keyword> keywords;
+
+std::string GetJSON() const
+{
+  return "";
+}
 };
 
 struct Emotions
