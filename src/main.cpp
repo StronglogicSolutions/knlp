@@ -83,12 +83,11 @@ int main(int argc, char** argv)
       std_output = conversation::TokensToJSON(conversation::GetTokens(config.text));
     break;
     case (Command::sentiment):
-      std_output = conversation::GetSentiment(config.text).GetJSON();
+      std_output = conversation::Sentiment::GetStub().GetJSON();
     break;
     case (Command::emotion):
-      std_output = conversation::GetEmotion(config.text).GetJSON();
+      std_output = conversation::Emotion::  GetStub().GetJSON();
     break;
-
   }
 
   conversation::log(std_output);
