@@ -20,7 +20,7 @@ static const std::string TOKEN_FILE_NAME{"tokenized_message.txt"};
 static bool initialize()
 {
   static INIReader config{CONFIG_PATH};
-         API_KEY = config.GetString("knlp", "api_key", "not found");
+         API_KEY = config.GetString("knlp", "api_key", "");
   if (API_KEY.empty())
     throw std::invalid_argument{"Please set an API key in config"};
   return true;
