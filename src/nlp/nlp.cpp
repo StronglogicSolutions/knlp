@@ -3,7 +3,9 @@
 #include <algorithm>
 
 namespace conversation {
-static const std::string API_KEY{GetConfigValue("api_key")};
+static       std::string API_KEY;
+static const std::string CONFIG_PATH{get_executable_cwd() + "../config/config.ini"};
+static const std::string PATH    {CONFIG_PATH};
 static const uint8_t     SENTIMENT_ANALYZER_INDEX{0x00};
 static const uint8_t     EMOTION_ANALYZER_INDEX  {0x01};
 static const char*       URLS[]{
@@ -17,8 +19,10 @@ static const std::string TOKEN_FILE_NAME{"tokenized_message.txt"};
 
 static bool initialize()
 {
+  static INIReader config{CONFIG_PATH};
+         API_KEY = config.GetString("knlp", "api_key", "not found");
   if (API_KEY.empty())
-    throw std::invalid_argument{"Please set an API key in config.ini"};
+    throw std::invalid_argument{"Please set an API key in config"};
   return true;
 }
 
