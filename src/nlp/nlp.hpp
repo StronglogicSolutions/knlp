@@ -166,8 +166,7 @@ std::string        TokensToJSON(const std::vector<Token>& tokens);
 class NLP
 {
 public:
-NLP(std::string username)
-: m_username{username} {}
+NLP(const std::string& username);
 
 Message*         Insert(Message&& node, const std::string& name);
 void             Reply(Message* node, std::string reply, std::string name);

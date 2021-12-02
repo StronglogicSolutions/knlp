@@ -2,6 +2,7 @@
 #include <fstream>
 #include <cstring>
 #include <sstream>
+#include "INIReader.h"
 
 namespace conversation
 {
@@ -32,6 +33,15 @@ static std::string ReadStats()
   std::stringstream fs{};
   fs << f.rdbuf();
   return fs.str();
+}
+
+static std::string GetConfigValue(const std::string& key, const std::string& default_value = "")
+{
+  static std::string path    {get_executable_cwd() + "../config/config.ini"};
+  static INIReader   config  {path};
+  static std::string section {"knlp"};
+
+  return config.Get(section, key, default_value);
 }
 
 }

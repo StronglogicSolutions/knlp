@@ -3,11 +3,10 @@
 #include <algorithm>
 
 namespace conversation {
-static const char* SENTIMENT_API_TOKEN{""};
-static const char* EMOTION_API_TOKEN  {""};
-static const uint8_t SENTIMENT_ANALYZER_INDEX{0x00};
-static const uint8_t EMOTION_ANALYZER_INDEX  {0x01};
-static const char* URLS[]{
+static const std::string API_KEY{GetConfigValue("api_key")};
+static const uint8_t     SENTIMENT_ANALYZER_INDEX{0x00};
+static const uint8_t     EMOTION_ANALYZER_INDEX  {0x01};
+static const char*       URLS[]{
   "https://twinword-sentiment-analysis.p.rapidapi.com/analyze/",
   "https://twinword-emotion-analysis-v1.p.rapidapi.com/analyze/"
 };
@@ -16,14 +15,23 @@ static const std::string TOKENIZER_PATH{"third_party/MITIE/tools/ner_stream/ner_
 static const std::string MODEL_PATH{"third_party/MITIE/MITIE-models/english/ner_model.dat"};
 static const std::string TOKEN_FILE_NAME{"tokenized_message.txt"};
 
+static bool initialize()
+{
+  if (API_KEY.empty())
+    throw std::invalid_argument{"Please set an API key in config.ini"};
+  return true;
+}
+
+
 static const std::string get_prefix()
 {
   return get_executable_cwd() + "../";
 }
 
+bool initialized = initialize();
+
 std::string TokenizeText(std::string s)
 {
-
   static const std::string execution_endpoint{get_prefix() + TOKENIZER_PATH + ' ' + get_prefix() + MODEL_PATH + '>' + TOKEN_FILE_NAME};
          const std::string execution_line    {"echo \"" + s + "\" | " + execution_endpoint + " 2>/dev/null"};
 
@@ -168,7 +176,7 @@ Sentiment GetSentiment(const std::string& query)
   RequestResponse response{cpr::Post(
     cpr::Url       {URLS[SENTIMENT_ANALYZER_INDEX]},
     cpr::Header    {{"x-rapidapi-host", "twinword-sentiment-analysis.p.rapidapi.com"},
-                    {"x-rapidapi-key" , SENTIMENT_API_TOKEN}},
+                    {"x-rapidapi-key" , API_KEY}},
     cpr::Parameters{{"text", query}})};
 
   if (!response.error)
@@ -201,7 +209,7 @@ Emotion GetEmotion(const std::string& query)
   RequestResponse response{cpr::Post(
     cpr::Url       {URLS[EMOTION_ANALYZER_INDEX]},
     cpr::Header    {{"x-rapidapi-host", "twinword-emotion-analysis-v1.p.rapidapi.com"},
-                    {"x-rapidapi-key" , EMOTION_API_TOKEN}},
+                    {"x-rapidapi-key" , API_KEY}},
     cpr::Parameters{{"text", query}})};
 
   if (!response.error)
@@ -211,6 +219,14 @@ Emotion GetEmotion(const std::string& query)
 
   return emotion;
 }
+
+/**
+ * @constructor
+ */
+NLP::NLP(const std::string& username)
+: m_username(username)
+{}
+
 /**
  *
  */

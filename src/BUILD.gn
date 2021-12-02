@@ -2,6 +2,14 @@ config("cpr") {
   include_dirs = [
     "//third_party/cpr/include"
   ]
+
+
+}
+
+config("inih") {
+  include_dirs = [
+    "//third_party/inih/cpp"
+  ]
 }
 
 config("json") {
@@ -10,10 +18,22 @@ config("json") {
   ]
 }
 
+source_set("ini_reader") {
+  sources = [
+    "//third_party/inih/ini.c",
+    "//third_party/inih/cpp/INIReader.cpp"
+  ]
+}
+
 source_set("knlp_sources") {
   public_configs = [
     ":cpr",
-    ":json"
+    ":json",
+    ":inih"
+  ]
+
+  deps = [
+    ":ini_reader"
   ]
 
   sources = [
