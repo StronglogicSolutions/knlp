@@ -7,9 +7,23 @@ static std::string SanitizeInput(std::string s)
   return s;
 }
 
+enum class Command
+{
+  entity    = 0x00,
+  emotion   = 0x01,
+  sentiment = 0x02,
+  none      = 0x03
+};
+
 struct ExecuteConfig {
 std::string text;
 std::string username;
+Command     command{Command::none};
+
+bool valid() const
+{
+  return command != Command::none;
+}
 };
 
 static ExecuteConfig ParseRuntimeArguments(int argc, char** argv)
@@ -19,40 +33,35 @@ static ExecuteConfig ParseRuntimeArguments(int argc, char** argv)
   for (int i = 1; i < argc; i++)
   {
     const std::string argument = SanitizeInput(argv[i]);
-    // if (argument.find("--header") == 0) {
-    //   config.message = argument.substr(9);
-    //   continue;
-    // }
-    // else
     if (argument.find("--description") == 0)
     {
       config.text = argument.substr(14);
       continue;
     }
-    // else
-    // if (argument.find("--filename") == 0) {
-    //   config.file_paths.emplace_back(argument.substr(11));
-    //   continue;
-    // }
     else
-    if (argument.find("--username") == 0) {
+    if (argument.find("--username") == 0)
+    {
       config.username = argument.substr(11);
       continue;
     }
-    // else
-    // if (argument.find("--execute_bot") == 0) {
-    //   config.execute_bot = (argument.substr(14).compare("true") == 0);
-    //   continue;
-    // }
-    // else
-    // if (argument.find("--prefer_media") == 0)
-    // {
-    //   config.prefer_media = (argument.substr(15) == "true");
-    //   continue;
-    // }
-    // else
-    // if (argument.find("--max") == 0)
-    //   config.max_results = std::stoi(argument.substr(6));
+    else
+    if (argument.find("entity") == 0)
+    {
+      config.command = Command::entity;
+      continue;
+    }
+    else
+    if (argument.find("sentiment") == 0)
+    {
+      config.command = Command::sentiment;
+      continue;
+    }
+    else
+    if (argument.find("emotion") == 0)
+    {
+      config.command = Command::emotion;
+      continue;
+    }
   }
 
   return config;
@@ -61,14 +70,27 @@ static ExecuteConfig ParseRuntimeArguments(int argc, char** argv)
 int main(int argc, char** argv)
 {
   ExecuteConfig config = ParseRuntimeArguments(argc, argv);
+  std::string   std_output;
 
+  if (!config.valid())
+    throw std::invalid_argument{"No command provided"};
   if (config.text.empty())
-    throw std::invalid_argument{"Must provide text for parsing"};
+    throw std::invalid_argument{"No text provided"};
 
-  // const std::string tokenized_text = conversation:: // TODO: JSON items which can be parsed by KIQ after
-  const std::string tokens_json = conversation::TokensToJSON(conversation::GetTokens(config.text));
-  conversation::log(tokens_json);
+  switch (config.command)
+  {
+    case (Command::entity):
+      std_output = conversation::TokensToJSON(conversation::GetTokens(config.text));
+    break;
+    case (Command::sentiment):
+      std_output = conversation::Sentiment::GetStub().GetJSON();
+    break;
+    case (Command::emotion):
+      std_output = conversation::Emotion::  GetStub().GetJSON();
+    break;
+  }
 
+  conversation::log(std_output);
 
   return 0;
 }

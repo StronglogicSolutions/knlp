@@ -1,5 +1,5 @@
 #pragma once
-
+#include <random>
 #include <string>
 #include <string_view>
 #include <cstring>
@@ -7,6 +7,7 @@
 #include <sstream>
 #include <fstream>
 #include <vector>
+#include <type_traits>
 #include "types.hpp"
 #include "request.hpp"
 
@@ -19,6 +20,26 @@ static void log(Args... args)
     std::cout << arg;
   std::cout << std::endl;
 }
+
+template <typename T = float>
+const auto GetRandom = [](const T& min, const T& max) -> T
+{
+  if constexpr (std::is_same_v<T, float>)
+  {
+    static std::random_device                rd;
+    static std::default_random_engine        e{rd()};
+    static std::uniform_real_distribution<T> dis(min, max);
+    return dis(e);
+  }
+  else
+  {
+    static std::random_device                rd;
+    static std::default_random_engine        e{rd()};
+    static std::uniform_int_distribution<T>  dis(min, max);
+    return dis(e);
+  }
+};
+
 enum class SentimentType
 {
 positive,
@@ -34,14 +55,34 @@ static SentimentType StringToSentiment(const std::string& s)
 
 struct Keyword
 {
-float        score;
 std::string  word;
+float        score;
 };
 struct Sentiment
 {
 SentimentType type;
 float         score;
 std::vector<Keyword> keywords;
+
+std::string GetJSON() const
+{
+  nlohmann::json json{};
+  json["type"] = (type == SentimentType::positive) ? "positive" : "negative";
+  json["score"] = score;
+  json["keywords"] = nlohmann::json::array();
+  for (const auto& keyword : keywords)
+    json["keywords"].emplace_back(nlohmann::json::object({{"word", keyword.word}, {"score", keyword.score}}));
+  return json.dump();
+}
+
+static Sentiment GetStub()
+{
+  return Sentiment{
+    .type = (GetRandom<int>(0, 1)) ? SentimentType::positive : SentimentType::negative,
+    .score = GetRandom<float>(0.0f, 1.0f),
+    .keywords = {Keyword{.word = "Your mother", .score = GetRandom<float>(0.0f, 1.0f)}}
+  };
+}
 };
 
 struct Emotions
@@ -61,6 +102,10 @@ Emotions                 scores;
 static Emotion Parse(const nlohmann::json& data)
 {
   Emotion emotion{};
+
+  auto s = data.dump();
+
+  log(s);
 
   if (!data.is_null() && data.is_object())
   {
@@ -90,6 +135,19 @@ std::string GetJSON() const
   for (const auto& emotion : emotions)
     json["emotions"].emplace_back(emotion);
   return json.dump();
+}
+
+static Emotion GetStub()
+{
+  Emotion emotion{};
+    emotion.emotions = {"joy", "fear", "disgust"};
+    emotion.scores.joy      = GetRandom<float>(0.0f, 1.0f);
+    emotion.scores.sadness  = GetRandom<float>(0.0f, 1.0f);
+    emotion.scores.surprise = GetRandom<float>(0.0f, 1.0f);
+    emotion.scores.fear     = GetRandom<float>(0.0f, 1.0f);
+    emotion.scores.anger    = GetRandom<float>(0.0f, 1.0f);
+    emotion.scores.disgust  = GetRandom<float>(0.0f, 1.0f);
+  return emotion;
 }
 };
 
