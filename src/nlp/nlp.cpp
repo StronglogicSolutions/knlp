@@ -5,7 +5,6 @@
 namespace conversation {
 static       std::string API_KEY;
 static const std::string CONFIG_PATH{get_executable_cwd() + "../config/config.ini"};
-static const std::string PATH    {CONFIG_PATH};
 static const uint8_t     SENTIMENT_ANALYZER_INDEX{0x00};
 static const uint8_t     EMOTION_ANALYZER_INDEX  {0x01};
 static const char*       URLS[]{
@@ -13,8 +12,8 @@ static const char*       URLS[]{
   "https://twinword-emotion-analysis-v1.p.rapidapi.com/analyze/"
 };
 
-static const std::string TOKENIZER_PATH{"third_party/MITIE/tools/ner_stream/ner_stream"};
-static const std::string MODEL_PATH{"third_party/MITIE/MITIE-models/english/ner_model.dat"};
+static const std::string TOKENIZER_PATH {"third_party/MITIE/tools/ner_stream/ner_stream"};
+static const std::string MODEL_PATH     {"third_party/MITIE/MITIE-models/english/ner_model.dat"};
 static const std::string TOKEN_FILE_NAME{"tokenized_message.txt"};
 
 static bool initialize()
