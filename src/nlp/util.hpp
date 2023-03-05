@@ -2,6 +2,7 @@
 #include <fstream>
 #include <cstring>
 #include <sstream>
+#include "INIReader.h"
 
 namespace conversation
 {
