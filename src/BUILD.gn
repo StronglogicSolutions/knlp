@@ -1,9 +1,7 @@
 config("cpr") {
   include_dirs = [
-    "//third_party/cpr/include"
+    "/usr/local/include/cpr"
   ]
-
-
 }
 
 config("inih") {
@@ -41,9 +39,7 @@ source_set("knlp_sources") {
   ]
 
   libs = [
-    "crypto",
-    "cpr",
-    "curl",
+    "cpr"
   ]
 }
 
