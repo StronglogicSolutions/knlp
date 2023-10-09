@@ -12,7 +12,8 @@ enum class Command
   entity    = 0x00,
   emotion   = 0x01,
   sentiment = 0x02,
-  none      = 0x03
+  context   = 0x03,
+  none      = 0x04
 };
 
 struct ExecuteConfig {
@@ -62,11 +63,36 @@ static ExecuteConfig ParseRuntimeArguments(int argc, char** argv)
       config.command = Command::emotion;
       continue;
     }
+    else
+    if (argument.find("context") == 0)
+    {
+      config.command = Command::context;
+      continue;
+    }
   }
 
   return config;
 }
 
+std::string
+to_string(const conversation::NLP::context& ctx)
+{
+  std::string s;
+  s += ctx.first.toString();
+  s += ctx.second.toString();
+  return s;
+}
+
+std::string
+get_context(const std::string& text)
+{
+  using namespace conversation;
+  NLP nlp{"kiq"};
+  Message* message = nlp.Insert(Message{.text = text, .received = false, .tokens = GetTokens(text)}, "kiq");
+  return to_string(NLP::context{*message->objective, *message->subjective});
+}
+
+//--------------------------------------------------
 int main(int argc, char** argv)
 {
   ExecuteConfig config = ParseRuntimeArguments(argc, argv);
@@ -87,6 +113,8 @@ int main(int argc, char** argv)
     break;
     case (Command::emotion):
       std_output = conversation::GetEmotion(config.text).GetJSON();
+    case (Command::context):
+      std_output = get_context(config.text);
     break;
   }
 

@@ -166,6 +166,7 @@ std::string        TokensToJSON(const std::vector<Token>& tokens);
 class NLP
 {
 public:
+using context = std::pair<ObjectiveContext, SubjectiveContext>;
 NLP(const std::string& username);
 
 Message*         Insert(Message&& node, const std::string& name);
