@@ -236,9 +236,9 @@ NLP::NLP(const std::string& username)
 Message* NLP::Insert(Message&& node, const std::string& name)
 {
   m_q.emplace_back(std::move(node));
-  const auto&               tokens   = node.tokens;
-  const auto                subject  = (tokens.size()) ? tokens.front().value : "unknown";
   Message*                  node_ref = &m_q.back();
+  const auto&               tokens   = node_ref->tokens;
+  const auto                subject  = (tokens.size()) ? tokens.front().value : "unknown";
   const Map::const_iterator it       = m_m.find(name);
 
   if (it == m_m.end())                                       // New

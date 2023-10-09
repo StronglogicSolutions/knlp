@@ -124,7 +124,7 @@ static ObjectiveContext Create(const std::string& s)
   return context;
 }
 
-std::string toString()
+std::string toString() const
 {
   if (is_question)
   {
@@ -187,7 +187,7 @@ void Insert(std::string s)
   (idx == 2) ? idx = 0 : idx++;
 }
 
-std::string toString()
+std::string toString() const
 {
   std::string s{};
   s.reserve(subjects[0].size() + subjects[1].size() + subjects[2].size());
