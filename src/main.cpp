@@ -75,12 +75,12 @@ static ExecuteConfig ParseRuntimeArguments(int argc, char** argv)
 }
 
 std::string
-to_string(const conversation::NLP::context& ctx)
+to_json(const conversation::NLP::context& ctx)
 {
-  std::string s;
-  s += ctx.first.toString();
-  s += ctx.second.toString();
-  return s;
+  nlohmann::json data;
+  data["objective"]  = ctx.first.toString();
+  data["subjective"] = ctx.second.toString();
+  return data.dump();
 }
 
 std::string
@@ -89,7 +89,7 @@ get_context(const std::string& text)
   using namespace conversation;
   NLP nlp{"kiq"};
   Message* message = nlp.Insert(Message{.text = text, .received = false, .tokens = GetTokens(text)}, "kiq");
-  return to_string(NLP::context{*message->objective, *message->subjective});
+  return to_json(NLP::context{*message->objective, *message->subjective});
 }
 
 //--------------------------------------------------
