@@ -2,7 +2,8 @@
 
 namespace conversation {
 
-std::string TokensToJSON(const std::vector<Token>& tokens)
+nlohmann::json
+TokensToJSON(const std::vector<Token>& tokens)
 {
   nlohmann::json data = nlohmann::json::array();
 
@@ -13,7 +14,7 @@ std::string TokensToJSON(const std::vector<Token>& tokens)
     json["value"] = token.value;
     data.emplace_back(json);
   }
-  return data.dump();
+  return data;
 }
 
 

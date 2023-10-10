@@ -75,9 +75,10 @@ static ExecuteConfig ParseRuntimeArguments(int argc, char** argv)
 }
 
 std::string
-to_json(const conversation::NLP::context& ctx)
+to_json(const conversation::NLP::context& ctx, const conversation::Tokens& tokens)
 {
   nlohmann::json data;
+  data["entities"]   = conversation::TokensToJSON(tokens);
   data["objective"]  = ctx.first.toString();
   data["subjective"] = ctx.second.toString();
   return data.dump();
@@ -87,9 +88,10 @@ std::string
 get_context(const std::string& text)
 {
   using namespace conversation;
-  NLP nlp{"kiq"};
-  Message* message = nlp.Insert(Message{.text = text, .received = false, .tokens = GetTokens(text)}, "kiq");
-  return to_json(NLP::context{*message->objective, *message->subjective});
+  NLP        nlp{"kiq"};
+  const auto tokens  = GetTokens(text);
+  Message*   message = nlp.Insert(Message{text,false, nullptr, nullptr, nullptr, tokens}, "kiq");
+  return to_json(NLP::context{*message->objective, *message->subjective}, tokens);
 }
 
 //--------------------------------------------------
@@ -106,7 +108,7 @@ int main(int argc, char** argv)
   switch (config.command)
   {
     case (Command::entity):
-      std_output = conversation::TokensToJSON(conversation::GetTokens(config.text));
+      std_output = conversation::TokensToJSON(conversation::GetTokens(config.text)).dump();
     break;
     case (Command::sentiment):
       std_output = conversation::GetSentiment(config.text).GetJSON();

@@ -137,9 +137,9 @@ ProbeType DetectProbeType(const std::string& s)
 /**
  * IsQuestion
  */
-bool IsQuestion(const std::string& s)
+size_t IsQuestion(const std::string& s)
 {
-  return (s.find("?") != std::string::npos);
+  return s.find("?");
 }
 
 bool IsContinuing(Message* node) {
@@ -243,7 +243,7 @@ Message* NLP::Insert(Message&& node, const std::string& name)
 
   if (it == m_m.end())                                       // New
   {
-    m_o.emplace_back(std::move(ObjectiveContext{}));
+    m_o.emplace_back(std::move(ObjectiveContext{node_ref}));
     m_s.emplace_back(std::move(SubjectiveContext{subject}));
     ObjectiveContext*  o_ctx_ref = &m_o.back();
     SubjectiveContext* s_ctx_ref = &m_s.back();
@@ -274,12 +274,12 @@ Message* NLP::Insert(Message&& node, const std::string& name)
  */
 void NLP::Reply(Message* node, std::string reply, std::string name) {
   Message reply_node{
-    .text       = reply,
-    .received   = false,
-    .next       = node->next,
-    .subjective = node->subjective,
-    .objective  = node->objective
-  };
+    reply,
+    false,
+    node->next,
+    node->subjective,
+    node->objective,
+    {}};
 
   m_q.emplace_back(std::move(reply_node));
   Message* reply_node_ref = &m_q.back();
@@ -372,9 +372,10 @@ bool NLP::SetContext(Message* node, const Tokens& tokens)
   {
     SubjectiveContext s_ctx{tokens};
     ObjectiveContext  o_ctx{};
-    o_ctx.is_question   = IsQuestion(node->text);
     o_ctx.is_continuing = IsContinuing(node);
     o_ctx.probe_type    = DetectProbeType(node->text);
+    o_ctx.q_index       = IsQuestion(node->text);
+    o_ctx.is_question   = o_ctx.q_index != std::string::npos;
 
     m_o.emplace_back(std::move(o_ctx));
     m_s.emplace_back(std::move(s_ctx));
