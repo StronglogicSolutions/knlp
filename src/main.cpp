@@ -113,6 +113,7 @@ int main(int argc, char** argv)
     break;
     case (Command::emotion):
       std_output = conversation::GetEmotion(config.text).GetJSON();
+    break;
     case (Command::context):
       std_output = get_context(config.text);
     break;
