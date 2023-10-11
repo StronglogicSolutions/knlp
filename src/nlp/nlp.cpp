@@ -371,7 +371,7 @@ bool NLP::SetContext(Message* node, const Tokens& tokens)
   try
   {
     SubjectiveContext s_ctx{tokens};
-    ObjectiveContext  o_ctx{};
+    ObjectiveContext  o_ctx{node};
     o_ctx.is_continuing = IsContinuing(node);
     o_ctx.probe_type    = DetectProbeType(node->text);
     o_ctx.q_index       = IsQuestion(node->text);
