@@ -156,11 +156,9 @@ std::vector<Token> SplitTokens(std::string s);
 std::vector<Token> GetTokens(const std::string& s);
 Token              ParseToken(const std::string& s);
 TokenType          GetType(const std::string& type);
-ProbeType          DetectProbeType(const std::string& s);
-bool               IsQuestion(const std::string& s);
 Sentiment          GetSentiment(const std::string& s);
 Emotion            GetEmotion(const std::string& query);
-std::string        TokensToJSON(const std::vector<Token>& tokens);
+nlohmann::json     TokensToJSON(const std::vector<Token>& tokens);
 
 
 class NLP

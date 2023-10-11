@@ -34,9 +34,9 @@ TEST(KNLPTests, Converse)
   for (auto i = 0; i < 9; i++)
   {
     line = ConversationPhrases[i];
-    Message* msg_ptr = nlp.Insert(Message{.text = line, .received = false, .tokens = GetTokens(line)}, USERNAME);
+    Message* msg_ptr = nlp.Insert(Message{line, false, nullptr, nullptr, nullptr, GetTokens(line)}, USERNAME);
     auto     replies = GetReplyMessage(msg_ptr->text, msg_ptr->tokens);
-    Message* rep_ptr = nlp.Insert(Message{.text=replies.front(), .received = true}, USERNAME);
+    Message* rep_ptr = nlp.Insert(Message{replies.front(), true}, USERNAME);
   }
 
   const auto final_s = nlp.toString();

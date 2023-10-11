@@ -107,20 +107,29 @@ const std::vector<std::string> PRTypeNames{
   "whose"
 };
 
-bool      IsQuestion(const std::string& s);
+size_t    IsQuestion(const std::string& s);
 ProbeType DetectProbeType(const std::string& s);
+
+struct message_interface
+{
+virtual ~message_interface()         = default;
+virtual std::string get_text() const = 0;
+};
 
 struct ObjectiveContext
 {
-bool         is_continuing;
-bool         is_question;
-ProbeType    probe_type;
+message_interface*  parent{nullptr};
+bool                is_continuing;
+bool                is_question;
+ProbeType           probe_type;
+size_t              q_index{std::string::npos};
 
-static ObjectiveContext Create(const std::string& s)
+static ObjectiveContext Create(const std::string& s, message_interface* parent_)
 {
-  ObjectiveContext context{};
+  ObjectiveContext context;
   context.is_question = IsQuestion(s);
   context.probe_type  = DetectProbeType(s);
+  context.parent      = parent_;
   return context;
 }
 
@@ -129,12 +138,14 @@ std::string toString() const
   if (is_question)
   {
     auto pr_index = (probe_type == PRTYPE_Unknown_INDEX) ? 1 : (probe_type * 2);
-    return "Is " + PRTypeNames.at(pr_index) + " question";
+    auto pr_name  = PRTypeNames.at(pr_index);
+    auto in_index = parent->get_text().find(pr_name);
+    auto pt_index = parent->get_text().find('.', in_index);
+    if (q_index < pt_index)
+      return "Is " + PRTypeNames.at(pr_index) + " question";
   }
   if (is_continuing)
-  {
     return "Is a continuation";
-  }
 
   return "Unknown";
 }
@@ -206,21 +217,37 @@ std::string subjects[3];
 uint8_t     idx{0};
 };
 
-struct Message;
-using  Map               = std::map<const std::string, Message*>;
-using  MessageObjects    = std::deque<Message>;
+// struct Message;
+
+using  Tokens            = std::vector<Token>;
 using  SubjectContexts   = std::deque<SubjectiveContext>;
 using  ObjectiveContexts = std::deque<ObjectiveContext>;
-using  Tokens            = std::vector<Token>;
-
-struct Message
+struct Message : public message_interface
 {
-const std::string         text;
-const bool                received;
-      Message*            next;
-      SubjectiveContext*  subjective;
-      ObjectiveContext*   objective;
-      Tokens              tokens;
+ Message(const std::string&       text_,
+               bool               received_,
+               Message*           next_       = nullptr,
+               SubjectiveContext* subjective_ = nullptr,
+               ObjectiveContext*  objective_  = nullptr,
+         const Tokens&            tokens_     = {})
+ : text(text_),
+   received(received_),
+   next(next_),
+   subjective(subjective_),
+   objective(objective_),
+   tokens(tokens_)
+   {}
+
+ ~Message() final = default;
+ std::string get_text() const final { return text; };
+ std::string         text;
+ bool                received;
+ Message*            next;
+ SubjectiveContext*  subjective;
+ ObjectiveContext*   objective;
+ Tokens              tokens;
 };
 
+using  Map               = std::map<const std::string, Message*>;
+using  MessageObjects    = std::deque<Message>;
 } // namespace conversation
