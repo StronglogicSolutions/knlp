@@ -57,58 +57,41 @@ enum ProbeType {
 };
 
 // namespace constants {
-const uint8_t PRTYPE_Unknown_INDEX = 0;
-const uint8_t PRTYPE_unknown_INDEX = 1;
-const uint8_t PRTYPE_What_INDEX = 2;
-const uint8_t PRTYPE_what_INDEX = 3;
-const uint8_t PRTYPE_Where_INDEX = 4;
-const uint8_t PRTYPE_where_INDEX = 5;
-const uint8_t PRTYPE_Why_INDEX = 6;
-const uint8_t PRTYPE_why_INDEX = 7;
-const uint8_t PRTYPE_Who_INDEX = 8;
-const uint8_t PRTYPE_who_INDEX = 9;
-const uint8_t PRTYPE_When_INDEX = 10;
-const uint8_t PRTYPE_when_INDEX = 11;
-const uint8_t PRTYPE_How_INDEX = 12;
-const uint8_t PRTYPE_how_INDEX = 13;
-const uint8_t PRTYPE_Can_INDEX = 14;
-const uint8_t PRTYPE_can_INDEX = 15;
-const uint8_t PRTYPE_Could_INDEX = 16;
-const uint8_t PRTYPE_could_INDEX = 17;
-const uint8_t PRTYPE_Is_INDEX = 18;
-const uint8_t PRTYPE_is_INDEX = 19;
-const uint8_t PRTYPE_Translate_INDEX = 20;
-const uint8_t PRTYPE_translate_INDEX = 21;
-const uint8_t PRTYPE_Whose_INDEX = 22;
 
 const std::vector<std::string> PRTypeNames{
-  "Unknown",
   "unknown",
-  "What",
   "what",
-  "Where",
   "where",
-  "Why",
   "why",
-  "Who",
   "who",
-  "When",
   "when",
-  "How",
   "how",
-  "Can",
   "can",
-  "Could",
   "could",
-  "Is",
   "is",
-  "Translate",
   "translate",
-  "whose"
+  "whose",
+  "was",
+  "were",
+  "am"
 };
 
-size_t    IsQuestion(const std::string& s);
-ProbeType DetectProbeType(const std::string& s);
+const std::vector<std::string> ImperativeNames{
+  "please",
+  "you must",
+  "do this",
+  "don't",
+  "make",
+  "create",
+  "start",
+  "stop"
+};
+
+bool        IsSinglePhrase(const std::string& s);
+bool        IsAssertion(const std::string& s);
+std::string FindImperative(const std::string& s);
+size_t      IsQuestion(const std::string& s);
+ProbeType   DetectProbeType(const std::string& s);
 
 struct message_interface
 {
@@ -119,35 +102,65 @@ virtual std::string get_text() const = 0;
 struct ObjectiveContext
 {
 message_interface*  parent{nullptr};
-bool                is_continuing;
-bool                is_question;
-ProbeType           probe_type;
+bool                is_continuing{false};
+bool                is_question{false};
+bool                is_assertion{false};
+bool                is_imperative{false};
+bool                is_single_phrase{false};
+ProbeType           probe_type{ProbeType::UNKNOWN};
 size_t              q_index{std::string::npos};
-
-static ObjectiveContext Create(const std::string& s, message_interface* parent_)
-{
-  ObjectiveContext context;
-  context.is_question = IsQuestion(s);
-  context.probe_type  = DetectProbeType(s);
-  context.parent      = parent_;
-  return context;
-}
+std::string         imperative_word{""};
 
 std::string toString() const
 {
-  if (is_question)
-  {
-    auto pr_index = (probe_type == PRTYPE_Unknown_INDEX) ? 1 : (probe_type * 2);
-    auto pr_name  = PRTypeNames.at(pr_index);
-    auto in_index = parent->get_text().find(pr_name);
-    auto pt_index = parent->get_text().find('.', in_index);
-    if (q_index < pt_index)
-      return "Is " + PRTypeNames.at(pr_index) + " question";
-  }
-  if (is_continuing)
-    return "Is a continuation";
+  std::vector<std::string> props;
 
-  return "Unknown";
+  if (is_question)
+    props.push_back("Is a question");
+  if (is_continuing)
+    props.push_back("Is a continuation");
+  if (is_assertion)
+    props.push_back("Is an assertion");
+  if (is_imperative)
+    props.push_back("Is an imperative statement");
+  if (is_single_phrase)
+    props.push_back("Is a single phrase");
+  if (probe_type != ProbeType::UNKNOWN)
+  {
+    auto   pr_name  = PRTypeNames.at(probe_type);
+    size_t in_index;
+    if (is_question)
+      in_index = parent->get_text().find(pr_name);
+
+    if (!is_question || (parent->get_text().find(pr_name) > parent->get_text().find('.', in_index)))
+      props.push_back("Has a probetype of " + pr_name);
+  }
+
+  if (props.empty())
+    props.push_back("Unknown");
+
+  std::string delim = "";
+  std::string ret   = "";
+  for (const auto& prop : props)
+  {
+    ret   += delim + prop;
+    delim  = ",";
+  }
+
+  return ret;
+}
+
+std::string debug() const
+{
+  return "parent's not null: " + std::to_string(parent != nullptr) + '\n' +
+         "is_single_phrase: "  + std::to_string(is_single_phrase)  + '\n' +
+         "is_continuing: "     + std::to_string(is_continuing)     + '\n' +
+         "is_imperative: "     + std::to_string(is_imperative)     + '\n' +
+         "is_assertion: "      + std::to_string(is_assertion)      + '\n' +
+         "is_question: "       + std::to_string(is_question)       + '\n' +
+         "probe_type: "        + PRTypeNames.at(probe_type)        + '\n' +
+         "q_index: "           + std::to_string(q_index)           + '\n' +
+         "Imperative: "        + imperative_word;
 }
 };
 
@@ -213,6 +226,15 @@ std::string toString() const
   return s;
 }
 
+bool
+empty() const
+{
+  for (const auto& subject : subjects)
+    if (!subject.empty())
+      return false;
+  return true;
+}
+
 std::string subjects[3];
 uint8_t     idx{0};
 };
@@ -240,6 +262,8 @@ struct Message : public message_interface
 
  ~Message() final = default;
  std::string get_text() const final { return text; };
+ std::string find_subject(const std::string&) const;
+
  std::string         text;
  bool                received;
  Message*            next;
