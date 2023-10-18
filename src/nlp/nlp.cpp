@@ -125,17 +125,18 @@ std::vector<Token> GetTokens(const std::string& s)
  * @param
  * @returns
  */
-ProbeType DetectProbeType(const std::string& s)
+ProbeType DetectProbeType(const std::string& text)
 {
-  uint8_t num = conversation::PRTypeNames.size();
-  for (uint8_t i = 2; i < num; i++)
-    if (s.find(conversation::PRTypeNames.at(i)) != std::string::npos)
-      return static_cast<conversation::ProbeType>((i / 2));
+  std::string s = text;
+  std::transform(s.begin(), s.end(), s.begin(), ::tolower);
+  for (int i = 0; i < PRTypeNames.size(); i++)
+    if (s.find(PRTypeNames[i]) != std::string::npos)
+      return static_cast<conversation::ProbeType>(i);
   return conversation::ProbeType::UNKNOWN;
 }
 
 /**
- * IsQuestion
+ * Is Question
  */
 size_t IsQuestion(const std::string& s)
 {
@@ -152,7 +153,43 @@ bool IsContinuing(Message* node) {
   return false;
 }
 
+bool IsAssertion(const std::string& s)
+{
 
+  return false;
+}
+
+std::string FindImperative(const std::string& s)
+{
+  if (s.empty())
+    return s;
+
+  std::string lower_s = s;
+  std::transform(lower_s.begin(), lower_s.end(), lower_s.begin(), ::tolower);
+
+  for (const auto& imp_w : ImperativeNames)
+    if (lower_s.find(imp_w) != lower_s.npos)
+      return imp_w;
+  return "";
+}
+
+bool IsSinglePhrase(const std::string& s)
+{
+  auto is_soft_stop = [](const std::string& s, char prev) { return (s.size() > 1 && prev == '.' || s.at(1) == '.'); };
+
+  if (s.empty())
+    return false;
+
+  auto pt_idx = s.find('.');
+  if (pt_idx == s.npos)
+    return true;
+
+  auto nib    = s.substr(pt_idx + 1);
+  while (pt_idx != s.npos && is_soft_stop(nib, s.at(pt_idx)))
+    pt_idx = s.find(pt_idx, '.');
+
+  return (pt_idx == s.npos || pt_idx == s.size());
+}
 
 static int32_t GetSentimentCount()
 {
@@ -368,19 +405,50 @@ std::string NLP::toString() {
 
 bool NLP::SetContext(Message* node, const Tokens& tokens)
 {
+  using args_t = std::vector<std::string>;
+  using prb_t  = conversation::ProbeType;
+
+  auto get_probe_name = [](const prb_t& probe) { return conversation::PRTypeNames.at(probe); };
+
+
   try
   {
-    SubjectiveContext s_ctx{tokens};
-    ObjectiveContext  o_ctx{node};
-    o_ctx.is_continuing = IsContinuing(node);
-    o_ctx.probe_type    = DetectProbeType(node->text);
-    o_ctx.q_index       = IsQuestion(node->text);
-    o_ctx.is_question   = o_ctx.q_index != std::string::npos;
+    SubjectiveContext subjective_ctx{tokens};
+    ObjectiveContext  objective_ctx {node};
 
-    m_o.emplace_back(std::move(o_ctx));
-    m_s.emplace_back(std::move(s_ctx));
+    m_o.emplace_back(std::move(objective_ctx));
+    m_s.emplace_back(std::move(subjective_ctx));
+
     node->objective  = &m_o.back();
     node->subjective = &m_s.back();
+
+    auto& o_ctx      = *(node->objective);
+    auto& s_ctx      = *(node->subjective);
+
+    o_ctx.is_continuing    = IsContinuing(node);
+    o_ctx.probe_type       = DetectProbeType(node->text);
+    o_ctx.q_index          = IsQuestion(node->text);
+    o_ctx.is_single_phrase = IsSinglePhrase(node->text);
+    o_ctx.is_question      = o_ctx.q_index != std::string::npos;
+
+    if (!o_ctx.is_question && s_ctx.empty())
+    {
+      if (o_ctx.is_single_phrase)
+      {
+        // Single phrase but no subjects found: we must identify the subject in the sentence, since our entity parsers failed to discover it
+        o_ctx.imperative_word = FindImperative(node->text);
+        o_ctx.is_imperative   = !o_ctx.imperative_word.empty();
+        o_ctx.is_assertion    = !o_ctx.is_imperative;
+        const auto probe      = get_probe_name(o_ctx.probe_type);
+        const auto p_idx      = node->text.find(probe);
+        const auto nib1       = node->text.substr(p_idx);
+        const auto nib2       = node->text.substr(0, p_idx + probe.size());
+        auto  subject = node->find_subject(nib1);
+        if (subject.empty())
+          subject = node->find_subject(nib2);
+        s_ctx.Insert(subject);
+      }
+    }
   }
   catch (const std::exception& e)
   {
@@ -388,5 +456,61 @@ bool NLP::SetContext(Message* node, const Tokens& tokens)
     return false;
   }
   return true;
+}
+
+std::string
+Message::find_subject(const std::string& s) const
+{
+  if (s.empty())
+    return s;
+
+  auto pt_idx = s.find_last_of('.');
+  if (!objective->is_single_phrase && pt_idx != s.npos && pt_idx != s.size())
+  {
+    auto nib1 = s.substr(0, pt_idx);
+    auto nib2 = s.substr(pt_idx + 1);
+
+    auto subject1 = find_subject(nib1);
+    auto subject2 = find_subject(nib2);
+    if (!subject1.empty())
+      return subject1;
+    if (!subject2.empty())
+      return subject2;
+  }
+
+  if (objective->is_assertion && objective->probe_type == ProbeType::IS)
+  {
+
+    std::string lower = s;
+    std::transform(lower.begin(), lower.end(), lower.begin(), ::tolower);
+
+    if (const auto pr_idx = lower.find("is"); pr_idx)
+    {
+      int start = pr_idx - 2;
+      for (int i = start; i > 0; i--)
+      {
+        const int c = static_cast<int>(s.at(i));
+        if ((i != start) && !(std::isalnum(c)))
+        {
+          int j;
+          for (j = i + 1; std::isalnum(s.at(j)) && j < s.size(); j++)
+            ;
+
+          if (std::string ret = s.substr(i, j - i); !ret.empty())
+          {
+            if (!std::isalnum(ret.front()))
+              ret.erase(0, 1);
+            if (!std::isalnum(ret.back()))
+              ret.pop_back();
+            return ret;
+          }
+        }
+        else
+        if (i == start && i == 0)
+          break;
+      }
+    }
+  }
+  return "";
 }
 } // namespace conversation
