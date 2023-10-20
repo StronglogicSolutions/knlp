@@ -175,7 +175,10 @@ std::string FindImperative(const std::string& s)
 
 bool IsSinglePhrase(const std::string& s)
 {
-  auto is_soft_stop = [](const std::string& s, char prev) { return (s.size() > 1 && prev == '.' || s.at(1) == '.'); };
+  auto is_soft_stop = [](const std::string& s, char prev)
+  {
+    return (s.size() > 1 && (prev == '.' || s.at(1) == '.'));
+  };
 
   if (s.empty())
     return false;
