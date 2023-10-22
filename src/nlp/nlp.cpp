@@ -1,6 +1,11 @@
 #include "nlp.hpp"
 #include "util.hpp"
 #include <algorithm>
+#include <set>
+#include <concepts>
+
+template <typename T>
+concept is_int_t = std::is_integral_v<T>;
 
 namespace conversation {
 static       std::string API_KEY;
@@ -15,6 +20,38 @@ static const char*       URLS[]{
 static const std::string TOKENIZER_PATH {"third_party/MITIE/tools/ner_stream/ner_stream"};
 static const std::string MODEL_PATH     {"third_party/MITIE/MITIE-models/english/ner_model.dat"};
 static const std::string TOKEN_FILE_NAME{"tokenized_message.txt"};
+
+static const std::set<std::string_view> titles{ "Mr.", "Mrs.", "Ms.", "Dr." };
+
+template <typename T>
+requires is_int_t<T>
+static bool is_title(std::string::const_iterator s_i, T size)
+{
+  if (!size || size < 3)
+    return false;
+
+  for (auto t : titles)
+  {
+    const auto title_size = t.size();
+    if (size < title_size)
+    {
+      auto found = false;
+      for (auto i = 0; i < title_size; i++)
+      {
+        if (*(s_i - i) == t.at(size - i))
+          continue;
+
+      }
+      return true;
+    }
+  }
+  return false;
+}
+
+auto is_soft_stop = [](const std::string& s, char prev)
+{
+  return (s.size() > 1 && (prev == '.' || s.at(1) == '.'));
+};
 
 static bool initialize()
 {
@@ -129,9 +166,16 @@ ProbeType DetectProbeType(const std::string& text)
 {
   std::string s = text;
   std::transform(s.begin(), s.end(), s.begin(), ::tolower);
+  const auto size = s.size();
   for (int i = 0; i < PRTypeNames.size(); i++)
-    if (s.find(PRTypeNames[i]) != std::string::npos)
-      return static_cast<conversation::ProbeType>(i);
+    if (const auto idx = s.find(PRTypeNames[i]); idx != std::string::npos)
+    {
+      auto p_sz     = PRTypeNames.at(i).size();
+      auto left_ok  = (idx == 2        || idx > 2 && (s.at(idx - 1   ) == ' ' || s.at(idx - 1   ) == '.'));
+      auto right_ok = (idx == size - 1 ||            (s.at(idx + p_sz) == ' ' || s.at(idx + p_sz) == '.'));
+      if (left_ok && right_ok)
+        return static_cast<conversation::ProbeType>(i);
+    }
   return conversation::ProbeType::UNKNOWN;
 }
 
@@ -175,14 +219,26 @@ std::string FindImperative(const std::string& s)
 
 bool IsSinglePhrase(const std::string& s)
 {
-  auto is_soft_stop = [](const std::string& s, char prev) { return (s.size() > 1 && prev == '.' || s.at(1) == '.'); };
-
   if (s.empty())
     return false;
 
   auto pt_idx = s.find('.');
   if (pt_idx == s.npos)
     return true;
+
+  if (pt_idx != 0)
+  {
+    if (auto title = is_title(s.cbegin(), pt_idx))
+      while (title)
+      {
+        pt_idx = s.find('.', pt_idx);
+        if (pt_idx == s.npos)
+          return false;
+      }
+    else
+      return false;
+
+  }
 
   auto nib    = s.substr(pt_idx + 1);
   while (pt_idx != s.npos && is_soft_stop(nib, s.at(pt_idx)))

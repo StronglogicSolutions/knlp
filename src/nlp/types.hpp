@@ -53,7 +53,11 @@ enum ProbeType {
   CAN = 7,
   COULD = 8,
   IS = 9,
-  TRANSLATE = 10
+  TRANSLATE = 10,
+  whose = 11,
+  was = 12,
+  were = 13,
+  am = 14
 };
 
 // namespace constants {
