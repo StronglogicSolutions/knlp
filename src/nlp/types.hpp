@@ -210,16 +210,16 @@ const std::string Next()
 
 void Insert(std::string s)
 {
-  subjects[idx] = s;
+  if (s.empty())
+    return;
 
+  subjects[idx] = s;
   (idx == 2) ? idx = 0 : idx++;
 }
 
 std::string toString() const
 {
-  std::string s{};
-  s.reserve(subjects[0].size() + subjects[1].size() + subjects[2].size());
-
+  std::string s;
   s += subjects[0];
 
   if (!subjects[1].empty())
