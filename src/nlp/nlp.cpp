@@ -5,6 +5,23 @@
 #include <concepts>
 
 template <typename T>
+void Split(const std::string &s, char delim, T result)
+{
+    std::istringstream iss(s);
+    std::string item;
+    while (std::getline(iss, item, delim))
+      *result++ = item;
+}
+
+std::vector<std::string> Split(const std::string &s, char delim)
+{
+    std::vector<std::string> v;
+    if (s.size())
+      Split(s, delim, std::back_inserter(v));
+    return v;
+}
+
+template <typename T>
 concept is_int_t = std::is_integral_v<T>;
 
 namespace conversation {
@@ -25,24 +42,26 @@ static const std::set<std::string_view> titles{ "Mr.", "Mrs.", "Ms.", "Dr." };
 
 template <typename T>
 requires is_int_t<T>
-static bool is_title(std::string::const_iterator s_i, T size)
+static bool is_title(std::string::const_iterator s_i, T size, std::string word)
 {
   if (!size || size < 3)
     return false;
 
   for (auto t : titles)
   {
-    const auto title_size = t.size();
-    if (size < title_size)
+    if (size < t.size())
     {
-      auto found = false;
-      for (auto i = 0; i < title_size; i++)
+      bool found = true;
+      for (auto i = 0; i < t.size(); i++)
       {
-        if (*(s_i - i) == t.at(size - i))
-          continue;
-
+        if (*(s_i - i) != t.at(size - i))
+        {
+          found = false;
+          break;
+        }
       }
-      return true;
+      if (found)
+        return true;
     }
   }
   return false;
@@ -199,7 +218,6 @@ bool IsContinuing(Message* node) {
 
 bool IsAssertion(const std::string& s)
 {
-
   return false;
 }
 
@@ -228,20 +246,20 @@ bool IsSinglePhrase(const std::string& s)
 
   if (pt_idx != 0)
   {
-    if (auto title = is_title(s.cbegin(), pt_idx))
+    if (auto title = is_title(s.cbegin(), pt_idx, s))
       while (title)
       {
         pt_idx = s.find('.', pt_idx);
         if (pt_idx == s.npos)
           return false;
+        title = is_title(s.cbegin(), pt_idx, s);
       }
     else
       return false;
 
   }
 
-  auto nib    = s.substr(pt_idx + 1);
-  while (pt_idx != s.npos && is_soft_stop(nib, s.at(pt_idx)))
+  while (pt_idx != s.npos && is_soft_stop(s.substr(pt_idx + 1), s.at(pt_idx)))
     pt_idx = s.find(pt_idx, '.');
 
   return (pt_idx == s.npos || pt_idx == s.size());
@@ -464,8 +482,18 @@ bool NLP::SetContext(Message* node, const Tokens& tokens)
   using args_t = std::vector<std::string>;
   using prb_t  = conversation::ProbeType;
 
-  auto get_probe_name = [](const prb_t& probe) { return conversation::PRTypeNames.at(probe); };
-
+  auto analyze_phrase = [this, &node](const auto& text, ObjectiveContext& o_ctx, SubjectiveContext& s_ctx)
+  {
+    o_ctx.imperative_word = FindImperative(text);
+    o_ctx.is_imperative   = !o_ctx.imperative_word.empty();
+    o_ctx.is_assertion    = !o_ctx.is_imperative;
+    const auto probe      = conversation::PRTypeNames.at(o_ctx.probe_type);
+    const auto p_idx      = text.find(probe);
+          auto subject    = node->find_subject((p_idx != text.npos) ? text.substr(p_idx) : text);
+    if (subject.empty() && (p_idx != text.npos))
+      subject = node->find_subject(text.substr(0, p_idx + probe.size()));
+    return subject;
+  };
 
   try
   {
@@ -487,30 +515,17 @@ bool NLP::SetContext(Message* node, const Tokens& tokens)
     o_ctx.is_single_phrase = IsSinglePhrase(node->text);
     o_ctx.is_question      = o_ctx.q_index != std::string::npos;
 
-    if (!o_ctx.is_question && s_ctx.empty())
-    {
-      if (o_ctx.is_single_phrase)
-      {
-        // Single phrase but no subjects found: we must identify the subject in the sentence, since our entity parsers failed to discover it
-        o_ctx.imperative_word = FindImperative(node->text);
-        o_ctx.is_imperative   = !o_ctx.imperative_word.empty();
-        o_ctx.is_assertion    = !o_ctx.is_imperative;
-        const auto probe      = get_probe_name(o_ctx.probe_type);
-        const auto p_idx      = node->text.find(probe);
-        const auto nib1       = node->text.substr(p_idx);
-        const auto nib2       = node->text.substr(0, p_idx + probe.size());
-        auto  subject = node->find_subject(nib1);
-        if (subject.empty())
-          subject = node->find_subject(nib2);
-        s_ctx.Insert(subject);
-      }
-    }
+    if (s_ctx.empty())
+      for (const auto& phrase : o_ctx.is_single_phrase ? args_t{node->text} :
+                                                         Split(node->text, '.'))
+        s_ctx.Insert(analyze_phrase(phrase, o_ctx, s_ctx));
   }
   catch (const std::exception& e)
   {
     std::cout << "Exception caught: " << e.what() << std::endl;
     return false;
   }
+
   return true;
 }
 
@@ -545,8 +560,7 @@ Message::find_subject(const std::string& s) const
       int start = pr_idx - 2;
       for (int i = start; i > 0; i--)
       {
-        const int c = static_cast<int>(s.at(i));
-        if ((i != start) && !(std::isalnum(c)))
+        if ((i != start) && !(std::isalnum(static_cast<int>(s.at(i)))))
         {
           int j;
           for (j = i + 1; std::isalnum(s.at(j)) && j < s.size(); j++)
