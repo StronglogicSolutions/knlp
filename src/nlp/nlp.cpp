@@ -130,13 +130,20 @@ TokenType GetType(const std::string& type)
  * @returns
  *
  */
+
+void strip_char(std::string& s, char x = '#')
+{
+  s.erase(std::remove_if(s.begin(), s.end(), [x](char c) { return c == x; }), s.end());
+}
+
 Token ParseToken(const std::string& s)
 {
-  auto delim = s.find(' ');
-  return Token{
-    .type  = GetType(s.substr(0, delim)),
-    .value = s.substr(delim + 1)
-  };
+
+        auto delim = s.find(' ');
+  const auto type  = GetType(s.substr(0, delim));
+        auto value = s.substr(delim + 1);
+  strip_char(value);
+  return Token{type, value};
 }
 
 /**
@@ -486,7 +493,7 @@ bool NLP::SetContext(Message* node, const Tokens& tokens)
   {
     o_ctx.imperative_word = FindImperative(text);
     o_ctx.is_imperative   = !o_ctx.imperative_word.empty();
-    o_ctx.is_assertion    = !o_ctx.is_imperative;
+    o_ctx.is_assertion    = !o_ctx.is_imperative && !o_ctx.is_question;
     const auto probe      = conversation::PRTypeNames.at(o_ctx.probe_type);
     const auto p_idx      = text.find(probe);
           auto subject    = node->find_subject((p_idx != text.npos) ? text.substr(p_idx) : text);
