@@ -522,7 +522,7 @@ bool NLP::SetContext(Message* node, const Tokens& tokens)
     o_ctx.is_single_phrase = IsSinglePhrase(node->text);
     o_ctx.is_question      = o_ctx.q_index != std::string::npos;
 
-    if (s_ctx.empty())
+    // if (s_ctx.empty())
       for (const auto& phrase : o_ctx.is_single_phrase ? args_t{node->text} :
                                                          Split(node->text, '.'))
         s_ctx.Insert(analyze_phrase(phrase, o_ctx, s_ctx));

@@ -172,60 +172,47 @@ struct SubjectiveContext
 {
 SubjectiveContext(const std::vector<Token>& tokens)
 {
-  if (!tokens.empty())
-  {
-    uint8_t i{};
-    for (auto it = tokens.begin(); (it != tokens.end()) && (i < 3); i++)
-      subjects[i] = (it++)->value;
-  }
+  for (const auto& token : tokens)
+    subjects.push_back(token.value);
 }
 
 SubjectiveContext(std::string subject)
 {
-  subjects[0] = subject;
-  subjects[1] = "";
-  subjects[2] = "";
+  subjects.push_back(subject);
 }
 
-const std::string& operator[] (uint8_t i) const
+std::string operator[] (uint8_t i) const
 {
-  if (i < 3)
-    return subjects[i];
-  return subjects[0];
+  if (subjects.size() > i)
+    return subjects.at(i);
+  return "";
 }
 
-const std::string Current() const
+std::string Next()
 {
-  if (idx == 0)
-    return subjects[2];
-  return subjects[idx - 1];
+  if (idx < subjects.size())
+    return subjects.at(idx++);
+  return "";
 }
 
-const std::string Next()
-{
-  const std::string ret_s = subjects[idx];
-  idx = (idx == 2) ? 0 : idx + 1;
-  return ret_s;
-}
-
-void Insert(std::string s)
+void Insert(const std::string& s)
 {
   if (s.empty())
     return;
 
-  subjects[idx] = s;
-  (idx == 2) ? idx = 0 : idx++;
+  subjects.push_back(s);
+  idx++;
 }
 
 std::string toString() const
 {
+  std::string d = "";
   std::string s;
-  s += subjects[0];
-
-  if (!subjects[1].empty())
-    s +=  ", " + subjects[1];
-  if (!subjects[2].empty())
-    s +=  ", " + subjects[2];
+  for (const auto& subject : subjects)
+  {
+    s += d + subject;
+    d = ", ";
+  }
 
   return s;
 }
@@ -233,13 +220,11 @@ std::string toString() const
 bool
 empty() const
 {
-  for (const auto& subject : subjects)
-    if (!subject.empty())
-      return false;
-  return true;
+  return subjects.empty();
 }
 
-std::string subjects[3];
+using subjects_t = std::vector<std::string>;
+subjects_t  subjects;
 uint8_t     idx{0};
 };
 
