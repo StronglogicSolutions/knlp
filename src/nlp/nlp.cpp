@@ -570,7 +570,7 @@ Message::find_subject(const std::string& s) const
         if ((i != start) && !(std::isalnum(static_cast<int>(s.at(i)))))
         {
           int j;
-          for (j = i + 1; std::isalnum(s.at(j)) && j < s.size(); j++)
+          for (j = i; std::isalnum(s.at(j)) && j < s.size(); j++)
             ;
 
           if (std::string ret = s.substr(i, j - i); !ret.empty())
