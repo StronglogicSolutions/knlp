@@ -90,7 +90,7 @@ get_context(const std::string& text)
   using namespace conversation;
   NLP        nlp{"kiq"};
   const auto tokens  = GetTokens(text);
-  Message*   message = nlp.Insert(Message{text,false, nullptr, nullptr, nullptr, tokens}, "kiq");
+  Message*   message = nlp.Insert(Message{text, false, nullptr, nullptr, nullptr, tokens}, "kiq");
   return to_json(NLP::context{*message->objective, *message->subjective}, tokens);
 }
 

@@ -42,7 +42,7 @@ static const std::set<std::string_view> titles{ "Mr.", "Mrs.", "Ms.", "Dr." };
 
 template <typename T>
 requires is_int_t<T>
-static bool is_title(std::string::const_iterator s_i, T size, std::string word)
+static bool is_title(std::string::const_iterator s_i, T size)
 {
   if (!size || size < 3)
     return false;
@@ -67,9 +67,10 @@ static bool is_title(std::string::const_iterator s_i, T size, std::string word)
   return false;
 }
 
-auto is_soft_stop = [](const std::string& s, char prev)
+auto is_soft_stop = [](const std::string& s, auto idx)
 {
-  return (s.size() > 1 && (prev == '.' || s.at(1) == '.'));
+  return ((s.size() > idx + 1 ) && s.at(idx + 1) == '.') ||
+         ((idx > 0)             && s.at(idx - 1) == '.');
 };
 
 static bool initialize()
@@ -81,6 +82,48 @@ static bool initialize()
   return true;
 }
 
+using phrases_t = std::vector<std::string>;
+auto extract_phrases = [](const std::string& s) -> std::vector<std::string>
+{
+  static const std::set<char> delimiters = {'\n', '.', ';', '-', ':'};
+  static       std::map<char, std::function<int(int& i)>> handlers{
+    {'\n', [&s](auto i) -> int // Lines
+    {
+      char d;
+      while ((++i < s.size()) && ((d = s.at(i)) == '\n'))
+        ;
+      return i;
+    }},
+    {'.' , [&s](int i) -> int // Phrases split by '.'
+    {
+      if (is_title(s.cbegin() + i, s.size()))
+        return 0;
+
+      char d;
+      while ((++i < s.size()) && ((d = s.at(i)) == '.'))
+        ;
+      return i;
+    }}
+  };
+
+  phrases_t  phrases;
+  const auto size = s.size();
+  int        j    = 0;
+
+  for (int i = 0, end = 0; i < size;)
+  {
+    char c = s.at(i);
+    if ((delimiters.find(c) != delimiters.end()) && (end = handlers.at(c)(i)))
+    {
+      phrases.push_back(s.substr(j, (end - j)));
+      j = i = end;
+    }
+    else
+      i++;
+  }
+  phrases.push_back(s.substr(j));
+  return phrases;
+};
 
 static const std::string get_prefix()
 {
@@ -188,7 +231,7 @@ std::vector<Token> GetTokens(const std::string& s)
  * @param
  * @returns
  */
-ProbeType DetectProbeType(const std::string& text)
+Probe DetectProbeType(const std::string& text)
 {
   std::string s = text;
   std::transform(s.begin(), s.end(), s.begin(), ::tolower);
@@ -200,9 +243,9 @@ ProbeType DetectProbeType(const std::string& text)
       auto left_ok  = (idx == 2        || idx > 2 && (s.at(idx - 1   ) == ' ' || s.at(idx - 1   ) == '.'));
       auto right_ok = (idx == size - 1 ||            (s.at(idx + p_sz) == ' ' || s.at(idx + p_sz) == '.'));
       if (left_ok && right_ok)
-        return static_cast<conversation::ProbeType>(i);
+        return static_cast<conversation::Probe::Type>(i);
     }
-  return conversation::ProbeType::UNKNOWN;
+  return conversation::Probe::Type::UNKNOWN;
 }
 
 /**
@@ -214,10 +257,10 @@ size_t IsQuestion(const std::string& s)
 }
 
 bool IsContinuing(Message* node) {
-  while (node->next != nullptr) {
-    if (node->next->received == false) {
+  while (node->next)
+  {
+    if (node->next->received == false)
       return true;
-    }
     node = node->next;
   }
   return false;
@@ -247,29 +290,51 @@ bool IsSinglePhrase(const std::string& s)
   if (s.empty())
     return false;
 
-  auto pt_idx = s.find('.');
-  if (pt_idx == s.npos)
-    return true;
 
-  if (pt_idx != 0)
+  auto find_next_phrase_by_dot = [&s]
   {
-    if (auto title = is_title(s.cbegin(), pt_idx, s))
-      while (title)
-      {
-        pt_idx = s.find('.', pt_idx);
-        if (pt_idx == s.npos)
-          return false;
-        title = is_title(s.cbegin(), pt_idx, s);
-      }
-    else
+    auto pt_idx = s.find('.');
+    if (pt_idx == s.npos)                                // None
       return false;
 
-  }
+    if (pt_idx != 0)
+    {
+      if (auto title = is_title(s.cbegin(), pt_idx)) // Possibly `Mr.` `Mrs.`
+        while (title)
+        {
+          pt_idx = s.find('.', pt_idx);
 
-  while (pt_idx != s.npos && is_soft_stop(s.substr(pt_idx + 1), s.at(pt_idx)))
-    pt_idx = s.find(pt_idx, '.');
+          if (pt_idx == s.npos)
+            return false;                               //
+          title = is_title(s.cbegin(), pt_idx);
+        }
+      else
+        return false;
 
-  return (pt_idx == s.npos || pt_idx == s.size());
+    }
+
+    while (pt_idx != s.npos && is_soft_stop(s.substr(pt_idx + 1), s.at(pt_idx)))
+      pt_idx = s.find(pt_idx, '.');
+
+    return (pt_idx == s.npos || pt_idx == s.size());
+  };
+
+  auto find_by_break = [&s]
+  {
+    auto pt_idx = s.find('\n');
+    // if (pt_idx == s.npos)
+    //   return true;
+    return false;
+  };
+
+  const auto has_multiple_by_dot = find_next_phrase_by_dot();
+
+  if (has_multiple_by_dot)
+    return false;
+
+  // if (find_by_break())
+
+  return false;
 }
 
 static int32_t GetSentimentCount()
@@ -487,14 +552,13 @@ std::string NLP::toString() {
 bool NLP::SetContext(Message* node, const Tokens& tokens)
 {
   using args_t = std::vector<std::string>;
-  using prb_t  = conversation::ProbeType;
 
   auto analyze_phrase = [this, &node](const auto& text, ObjectiveContext& o_ctx, SubjectiveContext& s_ctx)
   {
     o_ctx.imperative_word = FindImperative(text);
     o_ctx.is_imperative   = !o_ctx.imperative_word.empty();
     o_ctx.is_assertion    = !o_ctx.is_imperative && !o_ctx.is_question;
-    const auto probe      = conversation::PRTypeNames.at(o_ctx.probe_type);
+    const auto probe      = conversation::PRTypeNames.at(o_ctx.probe_type.to_int());
     const auto p_idx      = text.find(probe);
           auto subject    = node->find_subject((p_idx != text.npos) ? text.substr(p_idx) : text);
     if (subject.empty() && (p_idx != text.npos))
@@ -556,7 +620,7 @@ Message::find_subject(const std::string& s) const
       return subject2;
   }
 
-  if (objective->is_assertion && objective->probe_type == ProbeType::IS)
+  if (objective->is_assertion && objective->probe_type == Probe::Type::IS)
   {
 
     std::string lower = s;
