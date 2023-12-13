@@ -13,6 +13,9 @@
 
 namespace conversation
 {
+using phrases_t = std::vector<std::string>;
+phrases_t extract_phrases (const std::string& s);
+
 template <typename... Args>
 static void log(Args... args)
 {

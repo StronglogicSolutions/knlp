@@ -42,23 +42,52 @@ bool operator <(const CompositeContext &rhs) const
 }
 };
 
-enum ProbeType {
-  UNKNOWN = 0,
-  WHAT = 1,
-  WHERE = 2,
-  WHY = 3,
-  WHO = 4,
-  WHEN = 5,
-  HOW = 6,
-  CAN = 7,
-  COULD = 8,
-  IS = 9,
-  TRANSLATE = 10,
-  whose = 11,
-  was = 12,
-  were = 13,
-  am = 14
+struct Probe
+{
+  enum class Type {
+    UNKNOWN = 0,
+    WHAT = 1,
+    WHERE = 2,
+    WHY = 3,
+    WHO = 4,
+    WHEN = 5,
+    HOW = 6,
+    CAN = 7,
+    COULD = 8,
+    IS = 9,
+    TRANSLATE = 10,
+    whose = 11,
+    was = 12,
+    were = 13,
+    am = 14,
+    are = 15,
+    have = 16,
+    has = 17
+  };
+
+  Probe(Type type)
+  : value(type)
+  {}
+
+
+  int to_int() const
+  {
+    return static_cast<int>(value);
+  }
+
+  Type value;
+
+  bool operator==(const Probe::Type& t) const
+  {
+    return value == t;
+  }
+
+  bool operator!=(const Probe::Type& t) const
+  {
+    return value != t;
+  }
 };
+
 
 // namespace constants {
 
@@ -77,7 +106,10 @@ const std::vector<std::string> PRTypeNames{
   "whose",
   "was",
   "were",
-  "am"
+  "am",
+  "are",
+  "have",
+  "has"
 };
 
 const std::vector<std::string> ImperativeNames{
@@ -95,7 +127,7 @@ bool        IsSinglePhrase(const std::string& s);
 bool        IsAssertion(const std::string& s);
 std::string FindImperative(const std::string& s);
 size_t      IsQuestion(const std::string& s);
-ProbeType   DetectProbeType(const std::string& s);
+Probe       DetectProbeType(const std::string& s);
 
 struct message_interface
 {
@@ -111,7 +143,7 @@ bool                is_question{false};
 bool                is_assertion{false};
 bool                is_imperative{false};
 bool                is_single_phrase{false};
-ProbeType           probe_type{ProbeType::UNKNOWN};
+Probe               probe_type{Probe::Type::UNKNOWN};
 size_t              q_index{std::string::npos};
 std::string         imperative_word{""};
 
@@ -129,9 +161,9 @@ std::string toString() const
     props.push_back("Is an imperative statement");
   if (is_single_phrase)
     props.push_back("Is a single phrase");
-  if (probe_type != ProbeType::UNKNOWN)
+  if (probe_type != Probe::Type::UNKNOWN)
   {
-    auto   pr_name  = PRTypeNames.at(probe_type);
+    auto   pr_name  = PRTypeNames.at(probe_type.to_int());
     size_t in_index;
     if (is_question)
       in_index = parent->get_text().find(pr_name);
@@ -156,14 +188,14 @@ std::string toString() const
 
 std::string debug() const
 {
-  return "parent's not null: " + std::to_string(parent != nullptr) + '\n' +
-         "is_single_phrase: "  + std::to_string(is_single_phrase)  + '\n' +
-         "is_continuing: "     + std::to_string(is_continuing)     + '\n' +
-         "is_imperative: "     + std::to_string(is_imperative)     + '\n' +
-         "is_assertion: "      + std::to_string(is_assertion)      + '\n' +
-         "is_question: "       + std::to_string(is_question)       + '\n' +
-         "probe_type: "        + PRTypeNames.at(probe_type)        + '\n' +
-         "q_index: "           + std::to_string(q_index)           + '\n' +
+  return "parent's not null: " + std::to_string(parent != nullptr)   + '\n' +
+         "is_single_phrase: "  + std::to_string(is_single_phrase)    + '\n' +
+         "is_continuing: "     + std::to_string(is_continuing)       + '\n' +
+         "is_imperative: "     + std::to_string(is_imperative)       + '\n' +
+         "is_assertion: "      + std::to_string(is_assertion)        + '\n' +
+         "is_question: "       + std::to_string(is_question)         + '\n' +
+         "probe_type: "        + PRTypeNames.at(probe_type.to_int()) + '\n' +
+         "q_index: "           + std::to_string(q_index)             + '\n' +
          "Imperative: "        + imperative_word;
 }
 };
@@ -224,7 +256,10 @@ empty() const
 }
 
 using subjects_t = std::vector<std::string>;
+using phrases_t  = subjects_t;
+
 subjects_t  subjects;
+phrases_t   phrases;
 uint8_t     idx{0};
 };
 
@@ -235,6 +270,7 @@ using  SubjectContexts   = std::deque<SubjectiveContext>;
 using  ObjectiveContexts = std::deque<ObjectiveContext>;
 struct Message : public message_interface
 {
+ using Messages_t = std::vector<Message>;
  Message(const std::string&       text_,
                bool               received_,
                Message*           next_       = nullptr,
@@ -247,15 +283,17 @@ struct Message : public message_interface
    subjective(subjective_),
    objective(objective_),
    tokens(tokens_)
-   {}
+ {}
 
  ~Message() final = default;
  std::string get_text() const final { return text; };
  std::string find_subject(const std::string&) const;
+ void        expand(const std::string&);
 
  std::string         text;
  bool                received;
  Message*            next;
+ Messages_t          expanded;
  SubjectiveContext*  subjective;
  ObjectiveContext*   objective;
  Tokens              tokens;

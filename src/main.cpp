@@ -74,24 +74,32 @@ static ExecuteConfig ParseRuntimeArguments(int argc, char** argv)
   return config;
 }
 
-std::string
-to_json(const conversation::NLP::context& ctx, const conversation::Tokens& tokens)
+nlohmann::json
+to_json(const conversation::Message& msg, const conversation::Tokens& tokens)
 {
   nlohmann::json data;
+  const conversation::NLP::context ctx{*msg.objective, *msg.subjective};
+  data["message"]    = msg.get_text();
   data["entities"]   = conversation::TokensToJSON(tokens);
   data["objective"]  = ctx.first.toString();
   data["subjective"] = ctx.second.toString();
-  return data.dump();
+  return data;
 }
 
 std::string
 get_context(const std::string& text)
 {
   using namespace conversation;
-  NLP        nlp{"kiq"};
-  const auto tokens  = GetTokens(text);
-  Message*   message = nlp.Insert(Message{text,false, nullptr, nullptr, nullptr, tokens}, "kiq");
-  return to_json(NLP::context{*message->objective, *message->subjective}, tokens);
+
+  NLP            nlp{"kiq"};
+  nlohmann::json arr     = nlohmann::json::array();
+  const auto     tokens  = GetTokens(text);
+  Message*       message = nlp.Insert(Message{text, false, nullptr, nullptr, nullptr, tokens}, "kiq");
+  arr.push_back(to_json(*message, tokens));
+  for (const auto& msg : message->expanded)
+    arr.push_back(to_json(msg, tokens));
+
+  return arr.dump();
 }
 
 //--------------------------------------------------
