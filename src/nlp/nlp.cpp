@@ -40,6 +40,32 @@ static const std::string TOKEN_FILE_NAME{"tokenized_message.txt"};
 
 static const std::set<std::string_view> titles{ "Mr.", "Mrs.", "Ms.", "Dr." };
 
+std::string unescape_breaks(std::string s)
+{
+  std::string output;
+  if (s.empty())
+    return output;
+
+  size_t idx;
+  while ((idx = s.find("\\n")) != s.npos)
+  {
+    output += s.substr(0, idx);
+    output += '\n';
+    idx    += 2;
+    s       = s.substr(idx);
+  }
+
+  output += s;
+  return output;
+}
+
+void Message::expand(const std::string& text)
+{
+  expanded.push_back(Message{
+    text, received, nullptr, subjective, objective, tokens
+  });
+}
+
 template <typename T>
 requires is_int_t<T>
 static bool is_title(std::string::const_iterator s_i, T size)
@@ -48,22 +74,12 @@ static bool is_title(std::string::const_iterator s_i, T size)
     return false;
 
   for (auto t : titles)
-  {
     if (size < t.size())
-    {
-      bool found = true;
       for (auto i = 0; i < t.size(); i++)
-      {
         if (*(s_i - i) != t.at(size - i))
-        {
-          found = false;
-          break;
-        }
-      }
-      if (found)
-        return true;
-    }
-  }
+          return true;
+
+
   return false;
 }
 
@@ -82,9 +98,10 @@ static bool initialize()
   return true;
 }
 
-using phrases_t = std::vector<std::string>;
-auto extract_phrases = [](const std::string& s) -> std::vector<std::string>
+phrases_t extract_phrases (const std::string& t)
 {
+  const auto s = unescape_breaks(t);
+
   static const std::set<char> delimiters = {'\n', '.', ';', '-', ':'};
   static       std::map<char, std::function<int(int& i)>> handlers{
     {'\n', [&s](auto i) -> int // Lines
@@ -122,6 +139,7 @@ auto extract_phrases = [](const std::string& s) -> std::vector<std::string>
       i++;
   }
   phrases.push_back(s.substr(j));
+
   return phrases;
 };
 
@@ -586,10 +604,17 @@ bool NLP::SetContext(Message* node, const Tokens& tokens)
     o_ctx.is_single_phrase = IsSinglePhrase(node->text);
     o_ctx.is_question      = o_ctx.q_index != std::string::npos;
 
-    // if (s_ctx.empty())
-      for (const auto& phrase : o_ctx.is_single_phrase ? args_t{node->text} :
-                                                         Split(node->text, '.'))
-        s_ctx.Insert(analyze_phrase(phrase, o_ctx, s_ctx));
+    for (const auto& phrase : o_ctx.is_single_phrase ? args_t{node->text} :
+                                                        Split(node->text, '.'))
+      s_ctx.Insert(analyze_phrase(phrase, o_ctx, s_ctx));
+
+    if (!o_ctx.is_single_phrase)
+    {
+      const auto phrases = extract_phrases(node->text);
+      for (const auto& phrase : phrases)
+        node->expand(phrase);
+    }
+
   }
   catch (const std::exception& e)
   {

@@ -288,6 +288,7 @@ struct Message : public message_interface
  ~Message() final = default;
  std::string get_text() const final { return text; };
  std::string find_subject(const std::string&) const;
+ void        expand(const std::string&);
 
  std::string         text;
  bool                received;
