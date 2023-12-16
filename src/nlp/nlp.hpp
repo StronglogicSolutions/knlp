@@ -170,7 +170,7 @@ public:
 using context = std::pair<ObjectiveContext, SubjectiveContext>;
 NLP(const std::string& username);
 
-Message*         Insert(Message&& node, const std::string& name);
+Message*         Insert(Message&& node, const std::string& name = "default");
 void             Reply(Message* node, std::string reply, std::string name);
 bool             SetContext(Message* node, const Tokens& tokens);
 Map              GetConversations() { return m_m; }
