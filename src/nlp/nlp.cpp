@@ -323,7 +323,7 @@ bool IsSinglePhrase(const std::string& s)
           title = is_title(s.cbegin(), pt_idx);
         }
       else
-        return false;
+        return true;
     }
 
     while (pt_idx != s.npos && is_soft_stop(s.substr(pt_idx + 1), s.at(pt_idx)))
