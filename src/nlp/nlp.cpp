@@ -305,8 +305,7 @@ bool IsSinglePhrase(const std::string& s)
   if (s.empty())
     return false;
 
-
-  auto find_next_phrase_by_dot = [&s]
+  auto find_phrase_after_dot = [&s]
   {
     auto pt_idx = s.find('.');
     if (pt_idx == s.npos)                                // None
@@ -320,7 +319,7 @@ bool IsSinglePhrase(const std::string& s)
           pt_idx = s.find('.', ++pt_idx);
 
           if (pt_idx == s.npos)
-            return false;                               //
+            return false;
           title = is_title(s.cbegin(), pt_idx);
         }
       else
@@ -334,7 +333,7 @@ bool IsSinglePhrase(const std::string& s)
     return (pt_idx == s.npos || pt_idx == s.size());
   };
 
-  auto find_by_break = [&s]
+  auto find_phrase_by_break = [&s]
   {
     if (auto pt_idx = s.find('\n'); pt_idx != s.npos)
     {
@@ -345,26 +344,18 @@ bool IsSinglePhrase(const std::string& s)
     return false;
   };
 
-  const auto has_multiple_by_dot = find_next_phrase_by_dot();
-
-  if (has_multiple_by_dot)
+  if (find_phrase_after_dot() || find_phrase_by_break())
     return false;
-
-  // if (find_by_break())
-
   return true;
 }
 
 static int32_t GetSentimentCount()
 {
-  int32_t     count;
   std::string file = ReadStats();
   if (file.empty())
-    count = 0;
-  else
-    count = std::stoi(file);
-  return count;
-};
+    return 0;
+  return std::stoi(file);
+}
 
 static void IncrementSentimentCount()
 {
