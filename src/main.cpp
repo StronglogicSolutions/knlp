@@ -110,22 +110,19 @@ int main(int argc, char** argv)
 
   if (!config.valid())
     throw std::invalid_argument{"No command provided"};
+
   if (config.text.empty())
     throw std::invalid_argument{"No text provided"};
 
   switch (config.command)
   {
-    case (Command::entity):
-      std_output = conversation::TokensToJSON(conversation::GetTokens(config.text)).dump();
+    case (Command::entity):      std_output = conversation::TokensToJSON(conversation::GetTokens(config.text)).dump();
     break;
-    case (Command::sentiment):
-      std_output = conversation::GetSentiment(config.text).GetJSON();
+    case (Command::sentiment):   std_output = conversation::GetSentiment(config.text).GetJSON();
     break;
-    case (Command::emotion):
-      std_output = conversation::GetEmotion(config.text).GetJSON();
+    case (Command::emotion):     std_output = conversation::GetEmotion(config.text).GetJSON();
     break;
-    case (Command::context):
-      std_output = get_context(config.text);
+    case (Command::context):     std_output = get_context(config.text);
     break;
   }
 

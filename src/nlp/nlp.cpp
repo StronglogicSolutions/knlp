@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <set>
 #include <concepts>
+#include <cctype>
 
 template <typename T>
 void Split(const std::string &s, char delim, T result)
@@ -59,34 +60,38 @@ std::string unescape_breaks(std::string s)
   return output;
 }
 
-void Message::expand(const std::string& text)
+void Message::expand(Message&& msg)
 {
-  expanded.push_back(Message{
-    text, received, nullptr, subjective, objective, tokens
-  });
+  expanded.push_back(msg);
 }
 
 template <typename T>
 requires is_int_t<T>
-static bool is_title(std::string::const_iterator s_i, T size)
+static bool is_title(std::string::const_iterator s_i, T idx)
 {
-  if (!size || size < 3)
+  if (!idx || idx < 3)
     return false;
 
   for (auto t : titles)
-    if (size < t.size())
-      for (auto i = 0; i < t.size(); i++)
-        if (*(s_i - i) != t.at(size - i))
-          return true;
+  {
+    const auto t_size = t.size();
+    if (idx >= t_size)
+      for (auto i = 0; i < t_size; i++)
+        if (*(s_i + idx - i) != t.at(t_size - 1 - i))
+          return false;
 
+      return true;
+  }
 
   return false;
 }
 
 auto is_soft_stop = [](const std::string& s, auto idx)
 {
-  return ((s.size() > idx + 1 ) && s.at(idx + 1) == '.') ||
-         ((idx > 0)             && s.at(idx - 1) == '.');
+  if (s.empty())
+    return false;
+  return ((s.size() > idx + 1 ) && s.at(idx + 1) == '.' ||
+          ((idx > 0)            && s.at(idx - 1) == '.'));
 };
 
 static bool initialize()
@@ -100,37 +105,27 @@ static bool initialize()
 
 phrases_t extract_phrases (const std::string& t)
 {
-  const auto s = unescape_breaks(t);
+  static const std::set<char> delimiters = {'\n', '.', ';', ':'};
+         const auto           s          = unescape_breaks(t);         // <--- INPUT STRING
+         const auto           size       = s.size();
 
-  static const std::set<char> delimiters = {'\n', '.', ';', '-', ':'};
-  static       std::map<char, std::function<int(int& i)>> handlers{
-    {'\n', [&s](auto i) -> int // Lines
-    {
-      char d;
-      while ((++i < s.size()) && ((d = s.at(i)) == '\n'))
-        ;
-      return i;
-    }},
-    {'.' , [&s](int i) -> int // Phrases split by '.'
-    {
-      if (is_title(s.cbegin() + i, s.size()))
-        return 0;
+  auto handler = [&s](char c, auto i)
+  {
+    if ((c == '.') && is_title(s.begin(), i))
+      return 0;
 
-      char d;
-      while ((++i < s.size()) && ((d = s.at(i)) == '.'))
-        ;
-      return i;
-    }}
+    char   d;
+    while  ((++i < s.size()) && ((d = s.at(i)) == c));
+    return i;
   };
 
   phrases_t  phrases;
-  const auto size = s.size();
-  int        j    = 0;
+  int        j{};
 
   for (int i = 0, end = 0; i < size;)
   {
     char c = s.at(i);
-    if ((delimiters.find(c) != delimiters.end()) && (end = handlers.at(c)(i)))
+    if ((delimiters.find(c) != delimiters.end()) && (end = handler(c, i)))
     {
       phrases.push_back(s.substr(j, (end - j)));
       j = i = end;
@@ -138,9 +133,11 @@ phrases_t extract_phrases (const std::string& t)
     else
       i++;
   }
-  phrases.push_back(s.substr(j));
 
-  return phrases;
+  if (const auto last_phrase = s.substr(j); !last_phrase.empty())
+    phrases.push_back(last_phrase);
+
+  return (phrases.size() > 1) ? phrases : phrases_t{};
 };
 
 static const std::string get_prefix()
@@ -320,28 +317,31 @@ bool IsSinglePhrase(const std::string& s)
       if (auto title = is_title(s.cbegin(), pt_idx)) // Possibly `Mr.` `Mrs.`
         while (title)
         {
-          pt_idx = s.find('.', pt_idx);
+          pt_idx = s.find('.', ++pt_idx);
 
           if (pt_idx == s.npos)
             return false;                               //
           title = is_title(s.cbegin(), pt_idx);
         }
       else
-        return false;
-
+        return true;
     }
 
     while (pt_idx != s.npos && is_soft_stop(s.substr(pt_idx + 1), s.at(pt_idx)))
-      pt_idx = s.find(pt_idx, '.');
+      pt_idx = s.find(++pt_idx, '.');
 
+    pt_idx = s.find(++pt_idx, '.');
     return (pt_idx == s.npos || pt_idx == s.size());
   };
 
   auto find_by_break = [&s]
   {
-    auto pt_idx = s.find('\n');
-    // if (pt_idx == s.npos)
-    //   return true;
+    if (auto pt_idx = s.find('\n'); pt_idx != s.npos)
+    {
+      while (++pt_idx < s.size())
+        if (std::isalpha(+pt_idx))
+          return true;
+    }
     return false;
   };
 
@@ -352,7 +352,7 @@ bool IsSinglePhrase(const std::string& s)
 
   // if (find_by_break())
 
-  return false;
+  return true;
 }
 
 static int32_t GetSentimentCount()
@@ -444,15 +444,17 @@ Message* NLP::Insert(Message&& node, const std::string& name)
 
   if (it == m_m.end())                                       // New
   {
-    m_o.emplace_back(std::move(ObjectiveContext{node_ref}));
-    m_s.emplace_back(std::move(SubjectiveContext{subject}));
+    m_o.emplace_back(std::move(ObjectiveContext { node_ref }));
+    m_s.emplace_back(std::move(SubjectiveContext{ subject  }));
+
     ObjectiveContext*  o_ctx_ref = &m_o.back();
     SubjectiveContext* s_ctx_ref = &m_s.back();
+
     node_ref->objective          = o_ctx_ref;
     node_ref->subjective         = s_ctx_ref;
     node_ref->next               = nullptr;
 
-    m_m.insert({name, node_ref});
+    m_m.insert({ name, node_ref });
   }
   else                                                       // Append
   {
@@ -465,7 +467,9 @@ Message* NLP::Insert(Message&& node, const std::string& name)
     node_ref->subjective         = previous_head->subjective;
     node_ref->subjective->Insert(subject);
   }
+
   SetContext(node_ref, tokens);
+
   return node_ref;
 }
 
@@ -531,7 +535,7 @@ static std::string GetSubjects(Message* node)
 std::string NLP::toString() {
   std::string node_string{};
   for (const auto& it : m_m)
-   {
+  {
     const std::string interlocutor = it.first;
           Message*    node         = it.second;
 
@@ -541,11 +545,12 @@ std::string NLP::toString() {
 │░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░CONVERSATION░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░│\n\
 │░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░│\n│";
 
-    node_string += "\n│Interlocutor: " + interlocutor +
-                   "\n│Subjective:   " + GetSubjects(node) +
-                   "\n│Nodes:\n" +
-                   "├────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤\n" +
-                   "├────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤\n";
+    node_string +=
+"\n│Interlocutor: " + interlocutor +
+"\n│Subjective:   " + GetSubjects(node) +
+"\n│Nodes:\n" +
+"├────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤\n" +
+"├────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤\n";
 
     uint8_t n_idx{1};
     while ( node != nullptr)
@@ -604,17 +609,12 @@ bool NLP::SetContext(Message* node, const Tokens& tokens)
     o_ctx.is_single_phrase = IsSinglePhrase(node->text);
     o_ctx.is_question      = o_ctx.q_index != std::string::npos;
 
-    for (const auto& phrase : o_ctx.is_single_phrase ? args_t{node->text} :
-                                                        Split(node->text, '.'))
+    for (const auto& phrase : o_ctx.is_single_phrase ? args_t{node->text} : Split(node->text, '.'))
       s_ctx.Insert(analyze_phrase(phrase, o_ctx, s_ctx));
 
     if (!o_ctx.is_single_phrase)
-    {
-      const auto phrases = extract_phrases(node->text);
-      for (const auto& phrase : phrases)
-        node->expand(phrase);
-    }
-
+      for (const auto& phrase : extract_phrases(node->text))
+        node->expand(std::move(*Insert(Message{phrase, false, nullptr, nullptr, nullptr, GetTokens(phrase)}, "")));
   }
   catch (const std::exception& e)
   {

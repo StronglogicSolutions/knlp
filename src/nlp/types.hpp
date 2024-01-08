@@ -272,7 +272,7 @@ struct Message : public message_interface
 {
  using Messages_t = std::vector<Message>;
  Message(const std::string&       text_,
-               bool               received_,
+               bool               received_   = false,
                Message*           next_       = nullptr,
                SubjectiveContext* subjective_ = nullptr,
                ObjectiveContext*  objective_  = nullptr,
@@ -288,7 +288,7 @@ struct Message : public message_interface
  ~Message() final = default;
  std::string get_text() const final { return text; };
  std::string find_subject(const std::string&) const;
- void        expand(const std::string&);
+ void        expand(Message&&);
 
  std::string         text;
  bool                received;
