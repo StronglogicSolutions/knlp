@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <set>
 #include <concepts>
+#include <cctype>
 
 template <typename T>
 void Split(const std::string &s, char delim, T result)
@@ -335,9 +336,12 @@ bool IsSinglePhrase(const std::string& s)
 
   auto find_by_break = [&s]
   {
-    auto pt_idx = s.find('\n');
-    // if (pt_idx == s.npos)
-    //   return true;
+    if (auto pt_idx = s.find('\n'); pt_idx != s.npos)
+    {
+      while (++pt_idx < s.size())
+        if (std::isalpha(+pt_idx))
+          return true;
+    }
     return false;
   };
 
