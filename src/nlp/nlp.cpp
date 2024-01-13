@@ -308,7 +308,7 @@ bool IsSinglePhrase(const std::string& s)
   auto find_phrase_after_dot = [&s]
   {
     auto pt_idx = s.find('.');
-    if (pt_idx == s.npos)                                // None
+    if (pt_idx == s.npos || pt_idx == s.size() - 1)  // None
       return false;
 
     if (pt_idx != 0)
