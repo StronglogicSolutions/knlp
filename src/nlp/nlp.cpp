@@ -88,7 +88,7 @@ static bool is_title(std::string::const_iterator s_i, T idx)
 
 auto is_soft_stop = [](const std::string& s, auto idx)
 {
-  if (s.empty())
+  if (s.empty() || s.size() < (idx - 1))
     return false;
   return ((s.size() > idx + 1 ) && s.at(idx + 1) == '.' ||
           ((idx > 0)            && s.at(idx - 1) == '.'));
