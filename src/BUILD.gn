@@ -36,6 +36,7 @@ source_set("knlp_sources") {
 
   sources = [
     "//src/nlp/nlp.cpp",
+    "//src/nlp/words.cpp"
   ]
 
   libs = [
