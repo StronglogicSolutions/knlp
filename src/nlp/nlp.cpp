@@ -168,9 +168,20 @@ std::string ToLower(std::string s)
 std::string
 FindVerb(const std::string& text)
 {
+
   for (const auto& word : Split(ToLower(text)))
     if (const auto it = g_verb_map.find(word); it != g_verb_map.end())
-      return it->first;
+      return nlohmann::json{{"value", it->first }}.dump();
+  return "";
+}
+//--------------------------------------------------
+std::string
+FindPreposition(const std::string& text)
+{
+
+  for (const auto& word : Split(ToLower(text)))
+    if (const auto it = g_prep_map.find(word); it != g_prep_map.end())
+      return nlohmann::json{{"value", it->first }}.dump();
   return "";
 }
 
