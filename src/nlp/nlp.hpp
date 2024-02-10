@@ -16,6 +16,10 @@ namespace conversation
 using phrases_t = std::vector<std::string>;
 phrases_t extract_phrases (const std::string& s);
 
+using word_map_t = std::map<std::string, bool>;
+
+extern const word_map_t g_verb_map;
+
 template <typename... Args>
 static void log(Args... args)
 {
@@ -162,6 +166,8 @@ TokenType          GetType(const std::string& type);
 Sentiment          GetSentiment(const std::string& s);
 Emotion            GetEmotion(const std::string& query);
 nlohmann::json     TokensToJSON(const std::vector<Token>& tokens);
+std::string        ToLower(std::string s);
+std::string        FindVerb(const std::string&);
 
 
 class NLP

@@ -13,7 +13,8 @@ enum class Command
   emotion   = 0x01,
   sentiment = 0x02,
   context   = 0x03,
-  none      = 0x04
+  verb      = 0x04,
+  none      = 0x05
 };
 
 struct ExecuteConfig {
@@ -69,11 +70,17 @@ static ExecuteConfig ParseRuntimeArguments(int argc, char** argv)
       config.command = Command::context;
       continue;
     }
+    else
+    if (argument.find("verb") == 0)
+    {
+      config.command = Command::verb;
+      continue;
+    }
   }
 
   return config;
 }
-
+//--------------------------------------------------
 nlohmann::json
 to_json(const conversation::Message& msg, const conversation::Tokens& tokens)
 {
@@ -85,7 +92,7 @@ to_json(const conversation::Message& msg, const conversation::Tokens& tokens)
   data["subjective"] = ctx.second.toString();
   return data;
 }
-
+//--------------------------------------------------
 std::string
 get_context(const std::string& text)
 {
@@ -101,7 +108,6 @@ get_context(const std::string& text)
 
   return arr.dump();
 }
-
 //--------------------------------------------------
 int main(int argc, char** argv)
 {
@@ -123,6 +129,8 @@ int main(int argc, char** argv)
     case (Command::emotion):     std_output = conversation::GetEmotion(config.text).GetJSON();
     break;
     case (Command::context):     std_output = get_context(config.text);
+    break;
+    case (Command::verb):        std_output = conversation::FindVerb(config.text);
     break;
   }
 

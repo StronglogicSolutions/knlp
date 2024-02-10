@@ -14,7 +14,7 @@ void Split(const std::string &s, char delim, T result)
       *result++ = item;
 }
 
-std::vector<std::string> Split(const std::string &s, char delim)
+std::vector<std::string> Split(const std::string &s, char delim = ' ')
 {
     std::vector<std::string> v;
     if (s.size())
@@ -158,11 +158,22 @@ std::string TokenizeText(std::string s)
 }
 
 
-static std::string ToLower(std::string s)
+std::string ToLower(std::string s)
 {
   std::transform(s.begin(), s.end(), s.begin(), [](char c) { return tolower(c); });
   return s;
 }
+
+//--------------------------------------------------
+std::string
+FindVerb(const std::string& text)
+{
+  for (const auto& word : Split(ToLower(text)))
+    if (const auto it = g_verb_map.find(word); it != g_verb_map.end())
+      return it->first;
+  return "";
+}
+
 /**
  * GetType
  *
