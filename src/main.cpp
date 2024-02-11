@@ -9,12 +9,13 @@ static std::string SanitizeInput(std::string s)
 
 enum class Command
 {
-  entity    = 0x00,
-  emotion   = 0x01,
-  sentiment = 0x02,
-  context   = 0x03,
-  verb      = 0x04,
-  none      = 0x05
+  entity      = 0x00,
+  emotion     = 0x01,
+  sentiment   = 0x02,
+  context     = 0x03,
+  verb        = 0x04,
+  preposition = 0x05,
+  none        = 0x06
 };
 
 struct ExecuteConfig {
@@ -76,6 +77,12 @@ static ExecuteConfig ParseRuntimeArguments(int argc, char** argv)
       config.command = Command::verb;
       continue;
     }
+    else
+    if (argument.find("preposition") == 0)
+    {
+      config.command = Command::preposition;
+      continue;
+    }
   }
 
   return config;
@@ -131,6 +138,8 @@ int main(int argc, char** argv)
     case (Command::context):     std_output = get_context(config.text);
     break;
     case (Command::verb):        std_output = conversation::FindVerb(config.text);
+    break;
+    case (Command::preposition): std_output = conversation::FindPreposition(config.text);
     break;
   }
 

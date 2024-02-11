@@ -19,6 +19,7 @@ phrases_t extract_phrases (const std::string& s);
 using word_map_t = std::map<std::string, bool>;
 
 extern const word_map_t g_verb_map;
+extern const word_map_t g_prep_map;
 
 template <typename... Args>
 static void log(Args... args)
@@ -168,6 +169,7 @@ Emotion            GetEmotion(const std::string& query);
 nlohmann::json     TokensToJSON(const std::vector<Token>& tokens);
 std::string        ToLower(std::string s);
 std::string        FindVerb(const std::string&);
+std::string        FindPreposition(const std::string&);
 
 
 class NLP
