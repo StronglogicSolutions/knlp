@@ -4,6 +4,7 @@ namespace conversation
 {
 const word_map_t g_verb_map{
   { "be", true },
+  { "is", true },
   { "have", true },
   { "do", true },
   { "say", true },
@@ -100,9 +101,17 @@ const word_map_t g_verb_map{
   { "stay", true },
   { "fall", true },
   { "cut", true },
+  { "check", true },
   { "reach", true },
   { "kill", true },
-  { "remain", true }
+  { "remain", true },
+  { "listen", true },
+  { "write", true },
+  { "wrote", true },
+  { "prevent", true },
+  { "bypass", true },
+  { "advocate", true },
+  { "discuss", true }
 };
 
 const word_map_t g_prep_map{
