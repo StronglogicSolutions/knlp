@@ -15,11 +15,12 @@ namespace conversation
 {
 using phrases_t = std::vector<std::string>;
 phrases_t extract_phrases (const std::string& s);
-
-using word_map_t = std::map<std::string, bool>;
+class verb;
+using word_map_t = std::map<std::string, verb*>;
+using prep_map_t = std::map<std::string, bool>;
 
 extern const word_map_t g_verb_map;
-extern const word_map_t g_prep_map;
+extern const prep_map_t g_prep_map;
 
 template <typename... Args>
 static void log(Args... args)
